@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Box, Heading, Text, VStack, Spinner, Table, Thead, Tbody, Tr, Th, Td, Button, Select,
   Menu, MenuButton, MenuList, MenuItem, useDisclosure, Modal, ModalOverlay, ModalContent,
@@ -15,27 +15,33 @@ import { jsPDF } from "jspdf";
 
 interface PdaSummary {
   id: string;
+  _id: string;  // Ajout de _id car MongoDB l'utilise
   title: string;
-  beneficiaryName: string;
+  details: {
+    beneficiary: {
+      name: string;
+      address: string;
+      phone: string;
+    };
+    typeOfImprovement: string;
+    fiscalIncome: number;
+    estimatedCost: number;
+    grantAmount: number;
+  };
   createdAt: string;
   status: string;
-  grantAmount: number;
   createdBy: string;
 }
 
-// Fonction pour télécharger un PDF
 const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
   const doc = new jsPDF();
-
   doc.setFontSize(16);
   doc.text("Plan d'Aide à l'Habitat", 20, 20);
-
   doc.setFontSize(12);
-  doc.text(`Bénéficiaire: ${plan.beneficiaryName}`, 20, 40);
-  doc.text(`Montant de l'aide: ${plan.grantAmount ? plan.grantAmount.toLocaleString() : 'N/A'} €`, 20, 50);
+  doc.text(`Bénéficiaire: ${plan.details.beneficiary.name}`, 20, 40);
+  doc.text(`Montant de l'aide: ${plan.details.grantAmount ? plan.details.grantAmount.toLocaleString() : 'N/A'} €`, 20, 50);
   doc.text(`Prestation envisagée: ${plan.title}`, 20, 60);
   doc.text(`Date de création: ${new Date(plan.createdAt).toLocaleDateString()}`, 20, 70);
-
   return doc.output('blob');
 };
 
@@ -50,13 +56,13 @@ export default function PdaPlansList() {
   const router = useRouter();
   const { user, getAllUsers } = useAuth();
   const toast = useToast();
+  const isInitialMount = useRef(true);
 
-  // Hook pour charger les plans et agents uniquement une fois après authentification de l'utilisateur
+  // Charger les plans une seule fois au montage initial
   useEffect(() => {
-    if (!user) return; // Si l'utilisateur n'est pas authentifié, ne rien faire
+    const loadPlans = async () => {
+      if (!user) return;
 
-    const loadPlansAndAgents = async () => {
-      setLoading(true);
       try {
         const response = await fetch('/api/pda', {
           headers: {
@@ -69,18 +75,11 @@ export default function PdaPlansList() {
         }
 
         const result = await response.json();
-        const data: PdaSummary[] = result.data; // Récupérer uniquement les données
-        console.log("Plans d'aide reçus:", data);
+        const data: PdaSummary[] = result.data;
         setPlans(data);
-        setFilteredPlans(user.role === 'admin' ? data : data.filter((plan: PdaSummary) => plan.createdBy === user.id));
-
-        // Si l'utilisateur est admin, charger les agents
-        if (user.role === 'admin') {
-          const userList = await getAllUsers();
-          setAgents(userList.filter((u) => u.role === 'user'));
-        }
+        setFilteredPlans(user.role === 'admin' ? data : data.filter(plan => plan.createdBy === user.id));
       } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
+        console.error('Erreur lors du chargement des plans:', error);
         toast({
           title: "Erreur de chargement",
           description: "Impossible de charger les données.",
@@ -89,24 +88,41 @@ export default function PdaPlansList() {
           isClosable: true,
         });
       } finally {
-        setLoading(false); // Fin du chargement
+        setLoading(false);
       }
     };
 
-    loadPlansAndAgents();
-  }, [user, getAllUsers, toast]); // Dépendance à 'user', 'getAllUsers', 'toast'
-
-  // Gestion du filtrage par agent
-  const handleAgentFilter = (agentEmail: string) => {
-    setSelectedAgent(agentEmail);
-    if (agentEmail) {
-      setFilteredPlans(plans.filter(plan => plan.createdBy === agentEmail));
-    } else {
-      setFilteredPlans(plans);
+    // Ne charger qu'au montage initial
+    if (isInitialMount.current && user) {
+      loadPlans();
+      isInitialMount.current = false;
     }
-  };
+  }, [user, toast]);
 
-  // Fonction pour télécharger un PDF
+  // Charger les agents une seule fois si admin
+  useEffect(() => {
+    const loadAgents = async () => {
+      if (user?.role === 'admin' && isInitialMount.current) {
+        try {
+          const userList = await getAllUsers();
+          setAgents(userList.filter(u => u.role === 'user'));
+        } catch (error) {
+          console.error('Erreur lors du chargement des agents:', error);
+        }
+      }
+    };
+
+    loadAgents();
+  }, [user?.role, getAllUsers]);
+
+  const handleAgentFilter = useCallback((agentEmail: string) => {
+    setSelectedAgent(agentEmail);
+    setFilteredPlans(agentEmail 
+      ? plans.filter(plan => plan.createdBy === agentEmail)
+      : plans
+    );
+  }, [plans]);
+
   const handleDownloadPDF = async (plan: PdaSummary) => {
     try {
       const pdfBlob = await downloadPDF(plan);
@@ -116,7 +132,9 @@ export default function PdaPlansList() {
       link.setAttribute('download', `plan_aide_${plan.id}.pdf`);
       document.body.appendChild(link);
       link.click();
-      link.parentNode?.removeChild(link);
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
       toast({
         title: "Téléchargement réussi",
         description: "Le PDF a été téléchargé avec succès.",
@@ -136,57 +154,47 @@ export default function PdaPlansList() {
     }
   };
 
-  // Fonction pour modifier un plan
-  const handleEdit = (planId: string) => {
-    router.push(`/pda/edit/${planId}`);
-  };
-
-  // Fonction pour gérer la suppression
-  const handleDeleteClick = (planId: string) => {
-    setPlanToDelete(planId);
-    onOpen();
-  };
-
-  // Confirmation de suppression
   const handleDeleteConfirm = async () => {
-    if (planToDelete) {
-      try {
-        const response = await fetch(`/api/pda/${planToDelete}`, {
-          method: 'DELETE',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          }
-        });
+    if (!planToDelete) return;
+    
+    try {
+      const response = await fetch(`/api/pda/${planToDelete}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error('Erreur lors de la suppression du plan');
-        }
-
-        setPlans(plans.filter(plan => plan.id !== planToDelete));
-        setFilteredPlans(filteredPlans.filter(plan => plan.id !== planToDelete));
-        toast({
-          title: "Plan supprimé",
-          description: "Le plan d'aide a été supprimé avec succès.",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      } catch (error) {
-        console.error('Erreur lors de la suppression du plan:', error);
-        toast({
-          title: "Erreur de suppression",
-          description: "Une erreur est survenue lors de la suppression du plan.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
+      if (!response.ok) {
+        throw new Error('Erreur lors de la suppression du plan');
       }
+
+      // Utiliser _id pour la suppression car c'est l'identifiant MongoDB
+      setPlans(prevPlans => prevPlans.filter(plan => plan._id !== planToDelete));
+      setFilteredPlans(prevFiltered => prevFiltered.filter(plan => plan._id !== planToDelete));
+      
+      toast({
+        title: "Plan supprimé",
+        description: "Le plan d'aide a été supprimé avec succès.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
+      console.error('Erreur lors de la suppression du plan:', error);
+      toast({
+        title: "Erreur de suppression",
+        description: "Une erreur est survenue lors de la suppression du plan.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+    } finally {
+      onClose();
+      setPlanToDelete(null);
     }
-    onClose();
-    setPlanToDelete(null);
   };
 
-  // Affichage pendant le chargement
   if (loading) {
     return (
       <Box display="flex">
@@ -198,7 +206,6 @@ export default function PdaPlansList() {
     );
   }
 
-  // Affichage de la page avec les PDAs et actions
   return (
     <Box display="flex">
       <Sidebar />
@@ -212,7 +219,11 @@ export default function PdaPlansList() {
           </Box>
 
           {user?.role === 'admin' && (
-            <Select placeholder="Filtrer par agent" onChange={(e) => handleAgentFilter(e.target.value)} value={selectedAgent}>
+            <Select 
+              placeholder="Filtrer par agent" 
+              onChange={(e) => handleAgentFilter(e.target.value)} 
+              value={selectedAgent}
+            >
               <option value="">Tous les agents</option>
               {agents.map((agent) => (
                 <option key={agent.email} value={agent.email}>{agent.name}</option>
@@ -237,12 +248,12 @@ export default function PdaPlansList() {
               </Thead>
               <Tbody>
                 {filteredPlans.map((plan) => (
-                  <Tr key={plan.id}>
+                  <Tr key={plan._id}>
                     <Td>{plan.title}</Td>
-                    <Td>{plan.beneficiaryName || 'Non spécifié'}</Td>
+                    <Td>{plan.details.beneficiary.name}</Td>
                     <Td>{new Date(plan.createdAt).toLocaleDateString()}</Td>
                     <Td>{plan.status}</Td>
-                    <Td>{plan.grantAmount ? plan.grantAmount.toLocaleString() : 'N/A'} €</Td>
+                    <Td>{plan.details.grantAmount ? plan.details.grantAmount.toLocaleString() : 'N/A'} €</Td>
                     {user?.role === 'admin' && <Td>{plan.createdBy}</Td>}
                     <Td>
                       <Menu>
@@ -251,8 +262,10 @@ export default function PdaPlansList() {
                         </MenuButton>
                         <MenuList>
                           <MenuItem onClick={() => handleDownloadPDF(plan)}>Télécharger en PDF</MenuItem>
-                          <MenuItem onClick={() => handleEdit(plan.id)}>Modifier</MenuItem>
-                          <MenuItem onClick={() => handleDeleteClick(plan.id)} color="red.500">Supprimer</MenuItem>
+                          <MenuItem onClick={() => router.push(`/pda/edit/${plan._id}`)}>Modifier</MenuItem>
+                          <MenuItem onClick={() => { setPlanToDelete(plan._id); onOpen(); }} color="red.500">
+                            Supprimer
+                          </MenuItem>
                         </MenuList>
                       </Menu>
                     </Td>
@@ -264,7 +277,6 @@ export default function PdaPlansList() {
         </VStack>
       </Box>
 
-      {/* Modal de confirmation de suppression */}
       <Modal isOpen={isOpen} onClose={onClose}>
         <ModalOverlay />
         <ModalContent>
@@ -284,4 +296,3 @@ export default function PdaPlansList() {
     </Box>
   );
 }
-
