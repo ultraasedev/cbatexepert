@@ -1,25 +1,120 @@
-// models/Expertise.ts
-import mongoose from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
+
+interface RoomEvaluation {
+  windows?: number;
+  heating?: number;
+  humidity?: number;
+  ventilation?: number;
+}
+
+interface GlobalEvaluation {
+  score: number;
+  condition: 'Favorable' | 'Correct' | 'Critique';
+  comment: string;
+}
+
+interface IExpertise extends Document {
+  typeLogement: 'appartement' | 'maison';
+  beneficiaire: {
+    nom: string;
+    adresse: string;
+    telephone: string;
+  };
+  details: {
+    anneeConstruction: number;
+    superficie: number;
+    nombreEtages: number;
+  };
+  ouvertures: {
+    nombre: number;
+    typeVitrage: 'simple' | 'double';
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    anneeInstallation: number;
+  };
+  chauffage: {
+    type: 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
+    nombre: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    anneeInstallation: number;
+  };
+  humidite: {
+    taux: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  facade: {
+    type: 'Enduit' | 'Peinture' | 'Pierre';
+    epaisseurMurs: number;
+    dernierEntretien: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  tableauElectrique: {
+    type: 'Mono' | 'Triphasé';
+    anneePose: number;
+    presenceLinky: boolean;
+    auxNormes: boolean;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  ventilation: {
+    type: 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
+    nombreBouches: number;
+    piecesEquipees: string;
+    ventilationNaturelle: boolean;
+    anneePose: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  isolation: {
+    type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
+    pose: 'Sous rampants' | 'En soufflage' | 'En rouleau';
+    epaisseur: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    presenceCondensation: boolean;
+    localisationCondensation?: string;
+    tauxHumiditeCombles: number;
+    etatCombles: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  charpente: {
+    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
+    presenceArtive: boolean;
+    entretienEffectue: boolean;
+    dateEntretien?: Date;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  toiture: {
+    type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
+    typeFaitage: 'Cimente' | 'En Boîte';
+    dateEntretien: Date;
+    typeEntretien: string;
+    presenceImpuretes: boolean;
+    annee: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  evaluations: {
+    rooms: {
+      [key: string]: RoomEvaluation;
+    };
+    global: GlobalEvaluation;
+  };
+  createdBy: string; // Changé pour correspondre au PDA
+  status: 'En cours' | 'Terminé';
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 const ExpertiseSchema = new mongoose.Schema({
-  // Étape 1
   typeLogement: { type: String, enum: ['appartement', 'maison'], required: true },
   
-  // Étape 2
   beneficiaire: {
     nom: { type: String, required: true },
     adresse: { type: String, required: true },
     telephone: { type: String, required: true }
   },
   
-  // Étape 3
   details: {
     anneeConstruction: { type: Number, required: true },
     superficie: { type: Number, required: true },
     nombreEtages: { type: Number, required: true }
   },
   
-  // Étape 4
   ouvertures: {
     nombre: { type: Number, required: true },
     typeVitrage: { type: String, enum: ['simple', 'double'], required: true },
@@ -27,21 +122,18 @@ const ExpertiseSchema = new mongoose.Schema({
     anneeInstallation: { type: Number, required: true }
   },
   
-  // Étape 5
   chauffage: {
-    type: { type: String, enum: ['Électrique', 'Gaz', 'Fioul', 'Bois', 'Pele', 'Pompe à chaleur'], required: true },
+    type: { type: String, enum: ['Électrique', 'Gaz', 'Fioul', 'Bois', 'Poêle', 'Pac'], required: true },
     nombre: { type: Number, required: true },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
     anneeInstallation: { type: Number, required: true }
   },
   
-  // Étape 6
   humidite: {
     taux: { type: Number, required: true },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 7
   facade: {
     type: { type: String, enum: ['Enduit', 'Peinture', 'Pierre'], required: true },
     epaisseurMurs: { type: Number, required: true },
@@ -49,7 +141,6 @@ const ExpertiseSchema = new mongoose.Schema({
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 8
   tableauElectrique: {
     type: { type: String, enum: ['Mono', 'Triphasé'], required: true },
     anneePose: { type: Number, required: true },
@@ -58,7 +149,6 @@ const ExpertiseSchema = new mongoose.Schema({
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 9
   ventilation: {
     type: { type: String, enum: ['VMC Simple flux', 'Double Flux', 'VMI', 'VPH'], required: true },
     nombreBouches: { type: Number, required: true },
@@ -68,7 +158,6 @@ const ExpertiseSchema = new mongoose.Schema({
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 10
   isolation: {
     type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales'], required: true },
     pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau'], required: true },
@@ -80,7 +169,6 @@ const ExpertiseSchema = new mongoose.Schema({
     etatCombles: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 11
   charpente: {
     type: { type: String, enum: ['Fermette', 'Traditionnelle', 'Metalique'], required: true },
     presenceArtive: { type: Boolean, required: true },
@@ -89,7 +177,6 @@ const ExpertiseSchema = new mongoose.Schema({
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
-  // Étape 12
   toiture: {
     type: { type: String, enum: ['Ardoise Naturelle', 'Ardoise Fibrociment', 'Tuiles', 'Tuiles Béton', 'Acier'], required: true },
     typeFaitage: { type: String, enum: ['Cimente', 'En Boîte'], required: true },
@@ -99,8 +186,38 @@ const ExpertiseSchema = new mongoose.Schema({
     annee: { type: Number, required: true },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
-  
-  status: { type: String, enum: ['En cours', 'Terminé'], default: 'En cours' }
-}, { timestamps: true });
 
-export default mongoose.models.Expertise || mongoose.model('Expertise', ExpertiseSchema);
+  evaluations: {
+    rooms: {
+      type: Map,
+      of: {
+        windows: { type: Number, min: 1, max: 5 },
+        heating: { type: Number, min: 1, max: 5 },
+        humidity: { type: Number, min: 1, max: 5 },
+        ventilation: { type: Number, min: 1, max: 5 }
+      }
+    },
+    global: {
+      score: { type: Number, min: 0, max: 5 },
+      condition: { 
+        type: String, 
+        enum: ['Favorable', 'Correct', 'Critique']
+      },
+      comment: { type: String }
+    }
+  },
+  
+  // Modification du createdBy pour correspondre au PDA
+  createdBy: { 
+    type: String, 
+    required: true 
+  },
+
+  status: { type: String, enum: ['En cours', 'Terminé'], default: 'En cours' }
+}, { 
+  timestamps: true 
+});
+
+const Expertise: Model<IExpertise> = mongoose.models.Expertise || mongoose.model<IExpertise>('Expertise', ExpertiseSchema);
+
+export default Expertise;

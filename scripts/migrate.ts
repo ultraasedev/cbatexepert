@@ -4,55 +4,9 @@ import PDA from '../models/pda';
 import User from '../models/user';
 import Expertise from '../models/expertise';
 
-async function migrate() {
-  await dbConnect();
-  
-  let newUser;
-  // Création d'un utilisateur
-  try {
-    const userData = {
-      email: 'admin@gmail.com',
-      name: 'Admin User',
-      password: 'admin1234', 
-      role: 'admin'
-    };
-    newUser = new User(userData);
-    await newUser.save();
-    console.log('Utilisateur créé avec succès');
-  } catch (error) {
-    console.error('Erreur lors de la création de l\'utilisateur:', error);
-    return;
-  }
-
-  // Création d'un PDA
-  try {
-    const pdaData = {
-      title: "Plan d'aide test",
-      status: "En cours",
-      details: {
-        beneficiary: {
-          name: "John Doe",
-          address: "123 Test Street",
-          phone: "0123456789"
-        },
-        typeOfImprovement: "Isolation",
-        fiscalIncome: 30000,
-        estimatedCost: 10000,
-        grantAmount: 6000
-      },
-      createdBy: newUser._id 
-    };
-    const newPDA = new PDA(pdaData);
-    await newPDA.save();
-    console.log('PDA créé avec succès');
-  } catch (error) {
-    console.error('Erreur lors de la création du PDA:', error);
-  }
-
-  // Création d'une expertise
-  try {
-    const expertiseData = {
-      typeLogement: 'appartement', // Assurez-vous que cette valeur correspond à votre enum
+// Données d'expertise de base
+const baseExpertiseData = {
+  typeLogement: 'appartement',
   beneficiaire: {
     nom: "John Doe",
     adresse: "123 rue Example, Ville",
@@ -126,16 +80,129 @@ async function migrate() {
     annee: 1990,
     etat: 'Bon'
   },
+  evaluations: {
+    rooms: new Map([
+      ["entree", {
+        windows: 0,
+        heating: 5,
+        humidity: 4,
+        ventilation: 4
+      }],
+      ["salon", {
+        windows: 4,
+        heating: 5,
+        humidity: 4,
+        ventilation: 4
+      }],
+      ["cuisine", {
+        windows: 5,
+        heating: 4,
+        humidity: 4,
+        ventilation: 5
+      }]
+    ]),
+    global: {
+      score: 4.5,
+      condition: "Favorable",
+      comment: "Excellent état général"
+    }
+  },
   status: 'En cours'
+};
+
+async function migrate() {
+  await dbConnect();
+  
+  // Création de l'admin
+  let adminUser;
+  try {
+    const adminData = {
+      email: 'admin@gmail.com',
+      name: 'Admin User',
+      password: 'admin1234', 
+      role: 'admin'
     };
-    const newExpertise = new Expertise(expertiseData);
-    await newExpertise.save();
-    console.log('Expertise créée avec succès');
+    adminUser = new User(adminData);
+    await adminUser.save();
+    console.log('Administrateur créé avec succès');
   } catch (error) {
-    console.error('Erreur lors de la création de l\'expertise:', error);
+    console.error('Erreur lors de la création de l\'administrateur:', error);
+    return;
   }
 
-  console.log('Migration terminée');
+  // Création de l'utilisateur régulier
+  let regularUser;
+  try {
+    const regularUserData = {
+      email: 'user@user.com',
+      name: 'Regular User',
+      password: 'user1234', 
+      role: 'user'
+    };
+    regularUser = new User(regularUserData);
+    await regularUser.save();
+    console.log('Utilisateur régulier créé avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'utilisateur régulier:', error);
+    return;
+  }
+
+  // Création d'un PDA pour l'admin
+  try {
+    const pdaData = {
+      title: "Plan d'aide test",
+      status: "En cours",
+      details: {
+        beneficiary: {
+          name: "John Doe",
+          address: "123 Test Street",
+          phone: "0123456789"
+        },
+        typeOfImprovement: "Isolation",
+        fiscalIncome: 30000,
+        estimatedCost: 10000,
+        grantAmount: 6000
+      },
+      createdBy: adminUser.id
+    };
+    const newPDA = new PDA(pdaData);
+    await newPDA.save();
+    console.log('PDA créé avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la création du PDA:', error);
+  }
+
+  // Création d'une expertise pour l'admin
+  try {
+    const adminExpertise = {
+      ...baseExpertiseData,
+      createdBy: adminUser.id
+    };
+    const newAdminExpertise = new Expertise(adminExpertise);
+    await newAdminExpertise.save();
+    console.log('Expertise créée pour l\'administrateur avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'expertise admin:', error);
+  }
+
+  // Création d'une expertise pour l'utilisateur régulier
+  try {
+    const regularUserExpertise = {
+      ...baseExpertiseData,
+      beneficiaire: {
+        ...baseExpertiseData.beneficiaire,
+        nom: "Jane Smith"
+      },
+      createdBy: regularUser.id
+    };
+    const newRegularUserExpertise = new Expertise(regularUserExpertise);
+    await newRegularUserExpertise.save();
+    console.log('Expertise créée pour l\'utilisateur régulier avec succès');
+  } catch (error) {
+    console.error('Erreur lors de la création de l\'expertise utilisateur:', error);
+  }
+
+  console.log('Migration terminée avec succès');
   process.exit(0);
 }
 

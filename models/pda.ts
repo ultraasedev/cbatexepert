@@ -1,7 +1,6 @@
-import mongoose, { Document } from 'mongoose';
+import mongoose, { Document, Model } from 'mongoose';
 
-// Interface pour le document PDA
-interface IPDA extends Document {
+export interface IPDA extends Document {
   title: string;
   status: 'En cours' | 'Terminé';
   details: {
@@ -15,13 +14,12 @@ interface IPDA extends Document {
     estimatedCost: number;
     grantAmount: number;
   };
-  createdBy: string; // Utilisation de l'UUID comme string
+  createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Schéma pour le modèle PDA
-const PDASchema = new mongoose.Schema({
+const pdaSchema = new mongoose.Schema({
   title: {
     type: String,
     required: true
@@ -33,50 +31,24 @@ const PDASchema = new mongoose.Schema({
   },
   details: {
     beneficiary: {
-      name: {
-        type: String,
-        required: true
-      },
-      address: {
-        type: String,
-        required: true
-      },
-      phone: {
-        type: String,
-        required: true
-      },
+      name: { type: String, required: true },
+      address: { type: String, required: true },
+      phone: { type: String, required: true }
     },
-    typeOfImprovement: {
-      type: String,
-      required: true
-    },
-    fiscalIncome: {
-      type: Number,
-      required: true
-    },
-    estimatedCost: {
-      type: Number,
-      required: true
-    },
-    grantAmount: {
-      type: Number,
-      required: true
-    }
+    typeOfImprovement: { type: String, required: true },
+    fiscalIncome: { type: Number, required: true },
+    estimatedCost: { type: Number, required: true },
+    grantAmount: { type: Number, required: true }
   },
   createdBy: {
-    type: String, // Utilisation de l'UUID
+    type: String,
     required: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
   }
+}, { 
+  timestamps: true 
 });
 
-const PDA = mongoose.model<IPDA>('PDA', PDASchema);
-export default PDA;
+// Modification de cette ligne pour éviter l'erreur de compilation
+const PDA = (mongoose.models.PDA as Model<IPDA>) || mongoose.model<IPDA>('PDA', pdaSchema);
 
+export default PDA;

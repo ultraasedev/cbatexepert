@@ -1,161 +1,109 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import {
   Box,
-  Button,
-  FormControl,
-  FormLabel,
-  Input,
-  VStack,
+  Container,
   Heading,
-  NumberInput,
-  NumberInputField,
+  Spinner,
   useToast,
-  Select,
-  Text,
-  Spinner
+  VStack,
+  Button,
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  HStack,
+  Alert,
+  AlertIcon
 } from '@chakra-ui/react';
-import { useRouter } from 'next/navigation';
-import Sidebar from '../../../components/Sidebar';
+import { ChevronRightIcon } from '@chakra-ui/icons';
 import { useAuth } from '../../../lib/auth';
+import ExpertiseForm from '../../../components/ExpertiseForm';
+import Sidebar from '../../../components/Sidebar';
+import type { Expertise } from '../../../types';
 
-interface PdaFormData {
-  title: string;
-  status: 'En cours' | 'Terminé';
-  details: {
-    beneficiary: {
-      name: string;
-      address: string;
-      phone: string;
-    };
-    typeOfImprovement: string;
-    fiscalIncome: number;
-    estimatedCost: number;
-    grantAmount: number;
-  };
-}
-
-export default function EditPdaPage({ params }: { params: { id: string } }) {
-  const [formData, setFormData] = useState<PdaFormData>({
-    title: '',
-    status: 'En cours',
-    details: {
-      beneficiary: {
-        name: '',
-        address: '',
-        phone: ''
-      },
-      typeOfImprovement: '',
-      fiscalIncome: 0,
-      estimatedCost: 0,
-      grantAmount: 0
-    }
-  });
-
+export default function EditExpertisePage() {
+  const [expertise, setExpertise] = useState<Expertise | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  const params = useParams();
   const router = useRouter();
   const toast = useToast();
-  const { user } = useAuth();
+  const { user, getAuthHeaders } = useAuth();
 
-  // Charger les données du PDA
-  useEffect(() => {
-    const fetchPda = async () => {
-      try {
-        const response = await fetch(`/api/pda/${params.id}`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error('Erreur lors du chargement du plan d\'aide');
-        }
-
-        const data = await response.json();
-        setFormData(data.data);
-      } catch (error) {
-        setError('Impossible de charger les données du plan d\'aide');
-        toast({
-          title: 'Erreur',
-          description: 'Impossible de charger les données du plan d\'aide',
-          status: 'error',
-          duration: 5000,
-          isClosable: true,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (params.id) {
-      fetchPda();
-    }
-  }, [params.id, toast]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+  const loadExpertise = useCallback(async () => {
+    if (!params.id || !user) return;
 
     try {
-      const response = await fetch(`/api/pda/${params.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
+      setLoading(true);
+      setError(null);
+      console.log('Chargement de l\'expertise:', params.id);
+
+      const response = await fetch(`/api/expertises/${params.id}`, {
+        headers: getAuthHeaders()
       });
 
       if (!response.ok) {
-        throw new Error('Erreur lors de la mise à jour du plan d\'aide');
+        throw new Error('Erreur lors de la récupération de l\'expertise');
       }
 
-      toast({
-        title: 'Succès',
-        description: 'Le plan d\'aide a été mis à jour avec succès',
-        status: 'success',
-        duration: 5000,
-        isClosable: true,
-      });
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        console.log('Expertise chargée:', result.data);
+        
+        // Vérifier les permissions
+        if (user.role !== 'admin' && result.data.createdBy !== user.id) {
+          throw new Error('Vous n\'avez pas l\'autorisation de modifier cette expertise');
+        }
 
-      router.push('/pda');
-    } catch (error) {
+        setExpertise(result.data);
+      } else {
+        throw new Error(result.message || 'Erreur inconnue');
+      }
+    } catch (error: any) {
+      console.error('Erreur de chargement:', error);
+      setError(error.message);
       toast({
-        title: 'Erreur',
-        description: 'Une erreur est survenue lors de la mise à jour',
-        status: 'error',
+        title: "Erreur",
+        description: error.message || "Impossible de charger l'expertise",
+        status: "error",
         duration: 5000,
         isClosable: true,
       });
+      
+      // Rediriger après un court délai
+      setTimeout(() => {
+        router.push('/expertises');
+      }, 3000);
     } finally {
       setLoading(false);
     }
-  };
+  }, [params.id, user, getAuthHeaders, router, toast]);
 
-  const handleInputChange = (path: string, value: any) => {
-    setFormData(prev => {
-      const newFormData = { ...prev };
-      const keys = path.split('.');
-      let current: any = newFormData;
-      
-      for (let i = 0; i < keys.length - 1; i++) {
-        current[keys[i]] = { ...current[keys[i]] };
-        current = current[keys[i]];
-      }
-      
-      current[keys[keys.length - 1]] = value;
-      return newFormData;
-    });
+  useEffect(() => {
+    loadExpertise();
+  }, [loadExpertise]);
+
+  const handleCancel = () => {
+    router.push('/expertises');
   };
 
   if (loading) {
     return (
       <Box display="flex">
         <Sidebar />
-        <Box flex="1" p={8} display="flex" justifyContent="center" alignItems="center">
-          <Spinner size="xl" />
+        <Box flex="1">
+          <Container maxW="7xl" py={8}>
+            <VStack spacing={8} align="center" justify="center" minH="60vh">
+              <Spinner size="xl" thickness="4px" speed="0.65s" />
+              <Heading size="md" color="gray.500">
+                Chargement de l'expertise...
+              </Heading>
+            </VStack>
+          </Container>
         </Box>
       </Box>
     );
@@ -165,111 +113,66 @@ export default function EditPdaPage({ params }: { params: { id: string } }) {
     return (
       <Box display="flex">
         <Sidebar />
-        <Box flex="1" p={8}>
-          <Text color="red.500">{error}</Text>
-          <Button mt={4} onClick={() => router.push('/pda')}>Retour à la liste</Button>
+        <Box flex="1">
+          <Container maxW="7xl" py={8}>
+            <VStack spacing={8} align="center" justify="center" minH="60vh">
+              <Alert status="error">
+                <AlertIcon />
+                {error}
+              </Alert>
+              <Button onClick={handleCancel}>
+                Retour à la liste
+              </Button>
+            </VStack>
+          </Container>
         </Box>
       </Box>
     );
   }
 
+  if (!expertise) {
+    return null;
+  }
+
   return (
     <Box display="flex">
       <Sidebar />
-      <Box flex="1" p={8}>
-        <VStack spacing={6} align="stretch" as="form" onSubmit={handleSubmit}>
-          <Heading>Modifier le plan d'aide</Heading>
+      <Box flex="1">
+        <Container maxW="7xl" py={8}>
+          <VStack spacing={8} align="stretch">
+            <HStack justify="space-between" align="center">
+              <VStack align="stretch" spacing={4}>
+                <Breadcrumb 
+                  spacing='8px' 
+                  separator={<ChevronRightIcon color='gray.500' />}
+                >
+                  <BreadcrumbItem>
+                    <BreadcrumbLink onClick={handleCancel}>
+                      Expertises
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbItem isCurrentPage>
+                    <BreadcrumbLink>Modifier</BreadcrumbLink>
+                  </BreadcrumbItem>
+                </Breadcrumb>
+                <Heading size="lg">
+                  Modifier l'expertise pour {`${expertise.beneficiaire?.nom || 'le bénéficiaire'}`}
+                </Heading>
+              </VStack>
+              <Button 
+                variant="outline" 
+                onClick={handleCancel}
+              >
+                Annuler
+              </Button>
+            </HStack>
 
-          <FormControl isRequired>
-            <FormLabel>Titre</FormLabel>
-            <Input
-              value={formData.title}
-              onChange={(e) => handleInputChange('title', e.target.value)}
+            <ExpertiseForm 
+              isEditing={true}
+              initialData={expertise}
             />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Statut</FormLabel>
-            <Select
-              value={formData.status}
-              onChange={(e) => handleInputChange('status', e.target.value)}
-            >
-              <option value="En cours">En cours</option>
-              <option value="Terminé">Terminé</option>
-            </Select>
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Nom du bénéficiaire</FormLabel>
-            <Input
-              value={formData.details.beneficiary.name}
-              onChange={(e) => handleInputChange('details.beneficiary.name', e.target.value)}
-            />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Adresse du bénéficiaire</FormLabel>
-            <Input
-              value={formData.details.beneficiary.address}
-              onChange={(e) => handleInputChange('details.beneficiary.address', e.target.value)}
-            />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Téléphone du bénéficiaire</FormLabel>
-            <Input
-              value={formData.details.beneficiary.phone}
-              onChange={(e) => handleInputChange('details.beneficiary.phone', e.target.value)}
-            />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Type d'amélioration</FormLabel>
-            <Input
-              value={formData.details.typeOfImprovement}
-              onChange={(e) => handleInputChange('details.typeOfImprovement', e.target.value)}
-            />
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Revenu fiscal</FormLabel>
-            <NumberInput
-              value={formData.details.fiscalIncome}
-              onChange={(valueString) => handleInputChange('details.fiscalIncome', Number(valueString))}
-            >
-              <NumberInputField />
-            </NumberInput>
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Coût estimé</FormLabel>
-            <NumberInput
-              value={formData.details.estimatedCost}
-              onChange={(valueString) => handleInputChange('details.estimatedCost', Number(valueString))}
-            >
-              <NumberInputField />
-            </NumberInput>
-          </FormControl>
-
-          <FormControl isRequired>
-            <FormLabel>Montant de l'aide</FormLabel>
-            <NumberInput
-              value={formData.details.grantAmount}
-              onChange={(valueString) => handleInputChange('details.grantAmount', Number(valueString))}
-            >
-              <NumberInputField />
-            </NumberInput>
-          </FormControl>
-
-          <Box display="flex" gap={4}>
-            <Button colorScheme="blue" type="submit" isLoading={loading}>
-              Enregistrer les modifications
-            </Button>
-            <Button onClick={() => router.push('/pda')}>
-              Annuler
-            </Button>
-          </Box>
-        </VStack>
+          </VStack>
+        </Container>
       </Box>
     </Box>
   );

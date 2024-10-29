@@ -27,10 +27,9 @@ import {
   ModalFooter,
   ModalBody,
   ModalCloseButton,
-  useToast,
-  Badge
+  useToast
 } from '@chakra-ui/react';
-import { ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
+import { ChevronDownIcon } from '@chakra-ui/icons';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import { useAuth, User } from '../lib/auth';
@@ -45,12 +44,14 @@ interface Expertise {
     adresse: string;
   };
   createdAt: string;
-  createdBy: string; // ID de l'utilisateur
+  createdBy: {
+    id: string;
+    name: string;
+  };
   status: string;
   evaluations?: {
     global?: {
       condition: string;
-      score: number;
     };
   };
 }
@@ -69,14 +70,12 @@ export default function ExpertiseList() {
   const toast = useToast();
   const isInitialMount = useRef(true);
 
+  // Charger les expertises une seule fois au montage initial
   useEffect(() => {
     const loadExpertises = async () => {
       if (!user) return;
 
       try {
-        setLoading(true);
-        console.log('Chargement des expertises...');
-        
         const response = await fetch('/api/expertises', {
           headers: getAuthHeaders()
         });
@@ -86,20 +85,9 @@ export default function ExpertiseList() {
         }
 
         const result = await response.json();
-        console.log('Données reçues:', result);
-
-        if (result.success && Array.isArray(result.data)) {
-          const expertisesData = result.data as Expertise[];
-          console.log('Expertises récupérées:', expertisesData);
-
-          setExpertises(expertisesData);
-          if (user.role === 'admin') {
-            setFilteredExpertises(expertisesData);
-          } else {
-            const filtered = expertisesData.filter((exp: Expertise) => exp.createdBy === user.id);
-            setFilteredExpertises(filtered);
-          }
-        }
+        const data: Expertise[] = result.data;
+        setExpertises(data);
+        setFilteredExpertises(user.role === 'admin' ? data : data.filter(exp => exp.createdBy.id === user.id));
       } catch (error) {
         console.error('Erreur lors du chargement des expertises:', error);
         toast({
@@ -118,16 +106,15 @@ export default function ExpertiseList() {
       loadExpertises();
       isInitialMount.current = false;
     }
-  }, [user, getAuthHeaders, toast]);
+  }, [user, toast, getAuthHeaders]);
 
+  // Charger les agents une seule fois si admin
   useEffect(() => {
     const loadAgents = async () => {
       if (user?.role === 'admin' && isInitialMount.current) {
         try {
           const userList = await getAllUsers();
-          const agentsList = userList.filter(u => u.role === 'user');
-          console.log('Agents chargés:', agentsList);
-          setAgents(agentsList);
+          setAgents(userList.filter(u => u.role === 'user'));
         } catch (error) {
           console.error('Erreur lors du chargement des agents:', error);
         }
@@ -138,16 +125,11 @@ export default function ExpertiseList() {
   }, [user?.role, getAllUsers]);
 
   const handleAgentFilter = (agentId: string) => {
-    console.log('Filtrage par agent:', agentId);
     setSelectedAgent(agentId);
-    
-    if (!agentId || agentId === '') {
-      setFilteredExpertises(expertises);
-    } else {
-      const filtered = expertises.filter((exp: Expertise) => exp.createdBy === agentId);
-      console.log('Expertises filtrées:', filtered);
-      setFilteredExpertises(filtered);
-    }
+    setFilteredExpertises(agentId 
+      ? expertises.filter(expertise => expertise.createdBy.id === agentId)
+      : expertises
+    );
   };
 
   const handleDownloadPDF = async (expertiseId: string) => {
@@ -155,41 +137,30 @@ export default function ExpertiseList() {
       const response = await fetch(`/api/expertises/${expertiseId}/pdf`, {
         headers: getAuthHeaders()
       });
-  
-      if (!response.ok) {
-        throw new Error('Erreur lors de la génération du PDF');
-      }
-  
-      // Vérifier si c'est un PDF
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/pdf')) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `expertise-${expertiseId}.pdf`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-  
-        toast({
-          title: "Téléchargement réussi",
-          description: "Le PDF a été téléchargé avec succès.",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-      } else {
-        // Si ce n'est pas un PDF, c'est probablement une erreur JSON
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la génération du PDF');
-      }
-    } catch (error: any) {
-      console.error('Erreur de téléchargement:', error);
+
+      if (!response.ok) throw new Error('Erreur lors de la génération du PDF');
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `expertise-${expertiseId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast({
+        title: "Téléchargement réussi",
+        description: "Le PDF a été téléchargé avec succès.",
+        status: "success",
+        duration: 3000,
+        isClosable: true,
+      });
+    } catch (error) {
       toast({
         title: "Erreur de téléchargement",
-        description: error.message || "Une erreur est survenue lors du téléchargement du PDF.",
+        description: "Une erreur est survenue lors du téléchargement du PDF.",
         status: "error",
         duration: 3000,
         isClosable: true,
@@ -232,19 +203,6 @@ export default function ExpertiseList() {
     }
   };
 
-  const getConditionColor = (condition?: string) => {
-    switch (condition) {
-      case 'Favorable':
-        return 'green';
-      case 'Correct':
-        return 'yellow';
-      case 'Critique':
-        return 'red';
-      default:
-        return 'gray';
-    }
-  };
-
   if (loading) {
     return (
       <Box display="flex">
@@ -264,7 +222,6 @@ export default function ExpertiseList() {
           <Box display="flex" justifyContent="space-between" alignItems="center">
             <Heading>Expertises réalisées</Heading>
             <Button 
-              leftIcon={<AddIcon />}
               colorScheme="blue" 
               onClick={() => router.push('/expertises/new')}
             >
@@ -277,7 +234,6 @@ export default function ExpertiseList() {
               placeholder="Filtrer par agent" 
               onChange={(e) => handleAgentFilter(e.target.value)} 
               value={selectedAgent}
-              maxW="300px"
             >
               <option value="">Tous les agents</option>
               {agents.map((agent) => (
@@ -287,66 +243,54 @@ export default function ExpertiseList() {
           )}
 
           {filteredExpertises.length === 0 ? (
-            <Box p={8} textAlign="center" bg="gray.50" borderRadius="md">
-              <Text>Aucune expertise n'a été réalisée pour le moment.</Text>
-            </Box>
+            <Text>Aucune expertise n'a été réalisée pour le moment.</Text>
           ) : (
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
-                  <Tr>
-                    <Th>Date</Th>
-                    <Th>Type</Th>
-                    <Th>Bénéficiaire</Th>
-                    <Th>Adresse</Th>
-                    <Th>État</Th>
-                    {user?.role === 'admin' && <Th>Agent</Th>}
-                    <Th>Actions</Th>
+            <Table variant="simple">
+              <Thead>
+                <Tr>
+                  <Th>Date</Th>
+                  <Th>Type</Th>
+                  <Th>Bénéficiaire</Th>
+                  <Th>Adresse</Th>
+                  <Th>État</Th>
+                  {user?.role === 'admin' && <Th>Agent</Th>}
+                  <Th>Actions</Th>
+                </Tr>
+              </Thead>
+              <Tbody>
+                {filteredExpertises.map((expertise) => (
+                  <Tr key={expertise._id}>
+                    <Td>{format(new Date(expertise.createdAt), 'dd/MM/yyyy', { locale: fr })}</Td>
+                    <Td>{expertise.typeLogement}</Td>
+                    <Td>{expertise.beneficiaire.nom}</Td>
+                    <Td>{expertise.beneficiaire.adresse}</Td>
+                    <Td>{expertise.evaluations?.global?.condition || 'Non évalué'}</Td>
+                    {user?.role === 'admin' && <Td>{expertise.createdBy.name}</Td>}
+                    <Td>
+                      <Menu>
+                        <MenuButton as={Button} rightIcon={<ChevronDownIcon />} size="sm">
+                          Actions
+                        </MenuButton>
+                        <MenuList>
+                          <MenuItem onClick={() => handleDownloadPDF(expertise._id)}>
+                            Télécharger en PDF
+                          </MenuItem>
+                          <MenuItem onClick={() => router.push(`/expertises/edit/${expertise._id}`)}>
+                            Modifier
+                          </MenuItem>
+                          <MenuItem 
+                            onClick={() => { setExpertiseToDelete(expertise._id); onOpen(); }} 
+                            color="red.500"
+                          >
+                            Supprimer
+                          </MenuItem>
+                        </MenuList>
+                      </Menu>
+                    </Td>
                   </Tr>
-                </Thead>
-                <Tbody>
-                  {filteredExpertises.map((expertise) => (
-                    <Tr key={expertise._id}>
-                      <Td>{format(new Date(expertise.createdAt), 'dd/MM/yyyy', { locale: fr })}</Td>
-                      <Td>{expertise.typeLogement}</Td>
-                      <Td>{expertise.beneficiaire.nom}</Td>
-                      <Td>{expertise.beneficiaire.adresse}</Td>
-                      <Td>
-                        <Badge 
-                          colorScheme={getConditionColor(expertise.evaluations?.global?.condition)}
-                        >
-                          {expertise.evaluations?.global?.condition || 'Non évalué'}
-                        </Badge>
-                      </Td>
-                      {user?.role === 'admin' && (
-                        <Td>{agents.find(agent => agent.id === expertise.createdBy)?.name || 'N/A'}</Td>
-                      )}
-                      <Td>
-                        <Menu>
-                          <MenuButton as={Button} rightIcon={<ChevronDownIcon />} size="sm">
-                            Actions
-                          </MenuButton>
-                          <MenuList>
-                            <MenuItem onClick={() => handleDownloadPDF(expertise._id)}>
-                              Télécharger en PDF
-                            </MenuItem>
-                            <MenuItem onClick={() => router.push(`/expertises/edit/${expertise._id}`)}>
-                              Modifier
-                            </MenuItem>
-                            <MenuItem 
-                              onClick={() => { setExpertiseToDelete(expertise._id); onOpen(); }} 
-                              color="red.500"
-                            >
-                              Supprimer
-                            </MenuItem>
-                          </MenuList>
-                        </Menu>
-                      </Td>
-                    </Tr>
-                  ))}
-                </Tbody>
-              </Table>
-            </Box>
+                ))}
+              </Tbody>
+            </Table>
           )}
         </VStack>
       </Box>

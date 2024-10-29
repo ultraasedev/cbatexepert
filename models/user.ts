@@ -46,10 +46,18 @@ const UserSchema = new mongoose.Schema({
     default: 'user' 
   }
 }, { 
-  timestamps: true 
+  timestamps: true,
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true }
 });
 
-// Création du modèle
+// Virtual pour les expertises de l'utilisateur
+UserSchema.virtual('expertises', {
+  ref: 'Expertise',
+  localField: '_id',
+  foreignField: 'createdBy'
+});
+
 const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
 export default User;

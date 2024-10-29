@@ -1,28 +1,18 @@
 // app/expertises/new/page.tsx
 'use client';
 
-import ExpertiseForm from '@/app/components/ExpertiseForm';
-import { Box, Heading, IconButton } from '@chakra-ui/react';
-import { ArrowBackIcon } from '@chakra-ui/icons';
-import { useRouter } from 'next/navigation';
-import Sidebar from '@/app/components/Sidebar';
+import ExpertiseForm from '../../components/ExpertiseForm';
+import { Box, Heading } from '@chakra-ui/react';
+import Sidebar from '../../components/Sidebar';
+
 export default function NewExpertise() {
-  const router = useRouter();
-
-  const handleBack = () => {
-    router.push('/dashboard');
-  };
-
   return (
     <Box display="flex">
-    <Sidebar />
-    <Box flex="1" p={8}>
-      <Heading as="h1" size="xl" mb={6}>
-        
-      </Heading>
-      <ExpertiseForm />
+      <Sidebar />
+      <Box flex="1" p={8}>
+        <Heading mb={6}>Nouvelle expertise</Heading>
+        <ExpertiseForm />
+      </Box>
     </Box>
-  </Box>
-   
   );
 }
