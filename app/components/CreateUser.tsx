@@ -1,136 +1,251 @@
-'use client'
+// components/CreateUser.tsx
+'use client';
 
 import { useState } from 'react';
-import { 
-  Box, 
-  Button, 
-  FormControl, 
-  FormLabel, 
-  Input, 
-  VStack, 
-  useToast, 
+import {
+  Box,
+  FormControl,
+  FormLabel,
+  Input,
+  Button,
+  VStack,
+  useToast,
   Select,
-  InputGroup,
-  InputRightElement,
-  IconButton,
-  Text
+  FormErrorMessage,
+  Container,
+  Flex,
+  useBreakpointValue
 } from '@chakra-ui/react';
-import { ViewIcon, ViewOffIcon } from '@chakra-ui/icons';
+import Sidebar from './Sidebar';
+
+interface FormData {
+  name: string;
+  email: string;
+  password: string;
+  role: 'user' | 'admin';
+}
+
+interface FormErrors {
+  name?: string;
+  email?: string;
+  password?: string;
+  role?: string;
+}
 
 export default function CreateUser() {
-  const [userData, setUserData] = useState({ name: '', email: '', role: 'user', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<FormData>({
+    name: '',
+    email: '',
+    password: '',
+    role: 'user'
+  });
+  
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
+
+  // Responsive design variables
+  const formWidth = useBreakpointValue({
+    base: "90%",
+    sm: "450px",
+    md: "500px",
+  });
+
+  const padding = useBreakpointValue({
+    base: 4,
+    md: 6,
+  });
+
+  const validateForm = (): boolean => {
+    const newErrors: FormErrors = {};
+
+    if (!formData.name || formData.name.length < 2) {
+      newErrors.name = 'Le nom doit contenir au moins 2 caractères';
+    }
+
+    if (!formData.email || !/^\S+@\S+\.\S+$/.test(formData.email)) {
+      newErrors.email = 'Email invalide';
+    }
+
+    if (!formData.password || formData.password.length < 6) {
+      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères';
+    }
+
+    if (!formData.role) {
+      newErrors.role = 'Le rôle est requis';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setError(null);
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      console.log('Sending request to:', '/api/users');
-      console.log('Request data:', userData);
-
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/user', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(userData),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          action: 'register',
+          ...formData
+        })
       });
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Une erreur est survenue');
-      }
+      if (data.success) {
+        toast({
+          title: 'Utilisateur créé',
+          description: 'L\'utilisateur a été créé avec succès',
+          status: 'success',
+          duration: 5000,
+          isClosable: true,
+        });
 
-      toast({ title: "Utilisateur créé avec succès", status: "success" });
-      setUserData({ name: '', email: '', role: 'user', password: '' });
+        setFormData({
+          name: '',
+          email: '',
+          password: '',
+          role: 'user'
+        });
+      } else {
+        throw new Error(data.message || 'Erreur lors de la création');
+      }
     } catch (error: any) {
-      console.error('Error details:', error);
-      setError(error.message);
-      toast({ title: "Erreur", description: error.message, status: "error" });
+      toast({
+        title: 'Erreur',
+        description: error.message || 'Une erreur est survenue',
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+      });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setUserData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    if (errors[name as keyof FormErrors]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
   };
 
-  const togglePasswordVisibility = () => setShowPassword(!showPassword);
-
   return (
-    <Box maxWidth="400px" margin="auto">
-      <form onSubmit={handleSubmit}>
-        <VStack spacing={4}>
-          <FormControl isRequired>
-            <FormLabel>Nom</FormLabel>
-            <Input 
-              name="name"
-              value={userData.name} 
-              onChange={handleInputChange}
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Email</FormLabel>
-            <Input 
-              name="email"
-              type="email"
-              value={userData.email} 
-              onChange={handleInputChange}
-            />
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Rôle</FormLabel>
-            <Select 
-              name="role"
-              value={userData.role} 
-              onChange={handleInputChange}
-            >
-              <option value="user">Utilisateur</option>
-              <option value="admin">Administrateur</option>
-            </Select>
-          </FormControl>
-          <FormControl isRequired>
-            <FormLabel>Mot de passe</FormLabel>
-            <InputGroup>
-              <Input
-                name="password"
-                type={showPassword ? "text" : "password"}
-                value={userData.password}
-                onChange={handleInputChange}
-              />
-              <InputRightElement>
-                <IconButton
-                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-                  icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
-                  onClick={togglePasswordVisibility}
-                  variant="ghost"
-                  size="sm"
-                />
-              </InputRightElement>
-            </InputGroup>
-          </FormControl>
-          {error && (
-            <Text color="red.500" fontSize="sm">
-              Erreur: {error}
-            </Text>
-          )}
-          <Button 
-            type="submit" 
-            colorScheme="blue" 
-            width="full" 
-            isLoading={isLoading}
-            loadingText="Création en cours..."
+    <Flex width="100%" minHeight="100vh">
+      {/* Sidebar - Responsive */}
+      <Box display={{ base: 'none', md: 'block' }}>
+        <Sidebar />
+      </Box>
+
+      {/* Main Content */}
+      <Box flex="1" bg="gray.50">
+        <Container maxW="container.xl" py={{ base: 4, md: 8 }}>
+          <Flex 
+            direction="column" 
+            align="center" 
+            justify="center" 
+            minHeight="80vh"
           >
-            Créer l'utilisateur
-          </Button>
-        </VStack>
-      </form>
-    </Box>
+            <Box
+              width={formWidth}
+              p={padding}
+              bg="white"
+              borderRadius="lg"
+              boxShadow="xl"
+              borderWidth={1}
+              borderColor="gray.200"
+            >
+              <VStack spacing={4}>
+                <FormControl isInvalid={!!errors.name}>
+                  <FormLabel>Nom</FormLabel>
+                  <Input
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    placeholder="Entrez le nom"
+                    size="lg"
+                    bg="white"
+                  />
+                  <FormErrorMessage>{errors.name}</FormErrorMessage>
+                </FormControl>
+
+                <FormControl isInvalid={!!errors.email}>
+                  <FormLabel>Email</FormLabel>
+                  <Input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    placeholder="Entrez l'email"
+                    size="lg"
+                    bg="white"
+                  />
+                  <FormErrorMessage>{errors.email}</FormErrorMessage>
+                </FormControl>
+
+                <FormControl isInvalid={!!errors.password}>
+                  <FormLabel>Mot de passe</FormLabel>
+                  <Input
+                    name="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    placeholder="Entrez le mot de passe"
+                    size="lg"
+                    bg="white"
+                  />
+                  <FormErrorMessage>{errors.password}</FormErrorMessage>
+                </FormControl>
+
+                <FormControl isInvalid={!!errors.role}>
+                  <FormLabel>Rôle</FormLabel>
+                  <Select
+                    name="role"
+                    value={formData.role}
+                    onChange={handleChange}
+                    size="lg"
+                    bg="white"
+                  >
+                    <option value="user">Utilisateur</option>
+                    <option value="admin">Administrateur</option>
+                  </Select>
+                  <FormErrorMessage>{errors.role}</FormErrorMessage>
+                </FormControl>
+
+                <Button
+                  type="submit"
+                  colorScheme="blue"
+                  isLoading={isSubmitting}
+                  width="full"
+                  size="lg"
+                  mt={4}
+                  onClick={handleSubmit}
+                >
+                  Créer l'utilisateur
+                </Button>
+              </VStack>
+            </Box>
+          </Flex>
+        </Container>
+      </Box>
+    </Flex>
   );
 }

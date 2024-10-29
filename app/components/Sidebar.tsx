@@ -191,8 +191,7 @@ export default function Sidebar() {
             <MenuItem icon={MdAddBox} label="Créer un Agent" onClick={() => router.push('/guser/create')} />
             <MenuItem icon={MdSettings} label="Mes Agents" onClick={() => router.push('/guser/manage')} />
           </Collapse>
-          <MenuItem icon={MdAssignment} label="PDA des Agents" onClick={() => router.push('/admin/plans-aide')} />
-          <MenuItem icon={MdAssignment} label="Plan d'Expertise" onClick={() => router.push('/admin/plans-expertise')} />
+    
         </>
       )}
 
@@ -227,9 +226,6 @@ export default function Sidebar() {
               </ChakraMenuItem>
               <ChakraMenuItem icon={<MdEdit />} onClick={onEmailModalOpen}>
                 Changer l'email
-              </ChakraMenuItem>
-              <ChakraMenuItem icon={<MdSettings />} onClick={() => router.push('/settings')}>
-                Paramètres
               </ChakraMenuItem>
               <ChakraMenuItem icon={<MdExitToApp />} onClick={logout}>
                 Se déconnecter
@@ -301,7 +297,7 @@ export default function Sidebar() {
           icon={isCollapsed ? <MdChevronRight /> : <MdChevronLeft />}
           position="absolute"
           top={2}
-          right={-4}
+          right={0}
           zIndex={2}
           size="sm"
           boxShadow="md"
