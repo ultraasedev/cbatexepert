@@ -48,16 +48,17 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
 
     const data = await response.json();
     const formattedPDA = data.data;
-
     // Fonction pour formater les nombres avec une virgule
     const formatNumber = (num: number) => {
       return new Intl.NumberFormat('fr-FR', {
-        style: 'decimal',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
         useGrouping: true
-      }).format(Math.round(num));
+      }).format(num);
     };
+        
 
     // Configuration initiale du PDF
     const doc = new jsPDF();
@@ -121,8 +122,8 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.setFont('helvetica', 'bold');
-      const formattedValue = formatNumber(value);
-      doc.text(`${formattedValue} €`, x + 27.5, 174, { align: 'center' });
+      const formattedValue = formatNumber(value).replace(/\u202f/g, ' ');
+      doc.text(formattedValue, x + 27.5, 174, { align: 'center' });
     };
 
     // Afficher les montants dans des cadres colorés
