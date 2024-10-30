@@ -100,6 +100,7 @@ async function handleLogin({ email, password }: { email: string; password: strin
     }
 
     const token = createToken(user);
+    console.log('Token généré:', token);
     
     return NextResponse.json({ 
       success: true, 
@@ -165,6 +166,49 @@ async function handleRegister(data: {
     return NextResponse.json(
       { success: false, message: 'Erreur lors de la création de l\'utilisateur' },
       { status: 500 }
+    );
+  }
+}
+
+// Fonction pour gérer la récupération des utilisateurs
+export async function GET(request: NextRequest) {
+  const user = authenticateToken(request);
+
+  if (!user || user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, message: 'Accès non autorisé' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    await dbConnect();
+    const users = await User.find({}, 'id name email role'); // Choisissez les champs nécessaires
+
+    return NextResponse.json({
+      success: true,
+      data: users
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    return NextResponse.json(
+      { success: false, message: 'Erreur serveur' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const data = await request.json();
+
+  if (data.action === 'login') {
+    return handleLogin(data);
+  } else if (data.action === 'register') {
+    return handleRegister(data);
+  } else {
+    return NextResponse.json(
+      { success: false, message: 'Action non reconnue' },
+      { status: 400 }
     );
   }
 }

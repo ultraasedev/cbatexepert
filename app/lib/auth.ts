@@ -38,7 +38,7 @@ export function useAuth(): AuthReturn {
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
-
+  
   const refreshToken = async (currentToken: string) => {
     try {
       console.log('Tentative de rafraîchissement du token...');
@@ -294,9 +294,16 @@ export function useAuth(): AuthReturn {
     }
   };
 
-  const getAuthHeaders = () => ({
-    'Authorization': `Bearer ${token}`,
-  });
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error("Token manquant"); // Lever une erreur si le token est null
+    }
+    return {
+      'Authorization': `Bearer ${token}`,
+    };
+  };
+  
 
   return {
     user,

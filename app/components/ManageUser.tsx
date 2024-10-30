@@ -85,8 +85,12 @@ export default function ManageUsers() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
+
+      const headers = getAuthHeaders();
+
       const response = await fetch('/api/user', {
-        headers: getAuthHeaders()
+        method: 'GET',
+        headers,
       });
 
       if (!response.ok) {
@@ -94,12 +98,15 @@ export default function ManageUsers() {
           router.push('/login');
           return;
         }
-        throw new Error('Erreur lors de la récupération des utilisateurs');
+        const errorData = await response.json();
+        console.error('Erreur lors de la récupération des utilisateurs:', errorData);
+        throw new Error(errorData.message || 'Erreur lors de la récupération des utilisateurs');
       }
 
       const data = await response.json();
+      console.log('Liste des utilisateurs récupérée:', data); // Cela doit afficher la structure complète
       if (data.success) {
-        setUsers(data.data);
+        setUsers(data.data); // Mettez à jour l'état des utilisateurs avec data.data
       } else {
         throw new Error(data.message);
       }
@@ -284,7 +291,12 @@ export default function ManageUsers() {
             </Tr>
           </Thead>
           <Tbody>
-            {users.map((user) => (
+          {users.length === 0 ? ( // Vérifiez si le tableau est vide
+            <Tr>
+              <Td colSpan={4} textAlign="center">Aucun utilisateur trouvé</Td>
+            </Tr>
+          ) : (
+            users.map((user) => (
               <Tr key={user.id} _hover={{ bg: 'gray.50' }}>
                 <Td fontWeight="medium">{user.name}</Td>
                 <Td>{user.email}</Td>
@@ -317,8 +329,9 @@ export default function ManageUsers() {
                   </HStack>
                 </Td>
               </Tr>
-            ))}
-          </Tbody>
+            ))
+          )}
+        </Tbody>
         </Table>
       </Box>
 
