@@ -1,7 +1,7 @@
 // lib/auth.ts
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect , useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import jwt from 'jsonwebtoken';
 
@@ -72,6 +72,9 @@ export function useAuth(): AuthReturn {
     }
   };
 
+  const REFRESH_THRESHOLD = 24 * 60 * 60 * 1000; // 24 heures en millisecondes
+const lastTokenCheck = useRef<number>(0);
+
   useEffect(() => {
     const checkAuth = async () => {
       const storedToken = localStorage.getItem('token');
@@ -87,19 +90,19 @@ export function useAuth(): AuthReturn {
 
           console.log('Temps restant avant expiration:', timeUntilExpiry / 1000 / 60, 'minutes');
 
-          // Si le token expire dans moins de 24h, on le rafraîchit
-          if (timeUntilExpiry < 24 * 60 * 60 * 1000) {
-            console.log('Token proche de l\'expiration, rafraîchissement...');
-            const refreshed = await refreshToken(storedToken);
-            if (!refreshed) {
-              throw new Error('Échec du rafraîchissement du token');
-            }
-          } else {
-            // Si le token est encore valide
-            const userData = JSON.parse(localStorage.getItem('user') || '');
-            setUser(userData);
-            setToken(storedToken);
+              // Vérifier si le token expire dans moins de 24h et si on n'a pas déjà vérifié récemment
+        if (timeUntilExpiry < REFRESH_THRESHOLD && 
+            (currentTime - lastTokenCheck.current) > (60 * 60 * 1000)) { // Vérifier max une fois par heure
+          lastTokenCheck.current = currentTime;
+          const refreshed = await refreshToken(storedToken);
+          if (!refreshed) {
+            throw new Error('Échec du rafraîchissement du token');
           }
+        } else {
+          const userData = JSON.parse(localStorage.getItem('user') || '');
+          setUser(userData);
+          setToken(storedToken);
+        }
 
           // Redirection si sur la page login
           if (window.location.pathname === '/login') {

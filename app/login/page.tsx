@@ -26,7 +26,7 @@ export default function LoginPage() {
   return (
     <Box maxWidth="400px" margin="auto" mt={16}>
       <VStack spacing={8} align="center">
-        <Image src="/path-to-your-logo.svg" alt="Logo" width="48px" height="48px" />
+        <Image src="/logicon.png" alt="Logo" width="48px" height="48px" />
         <LoginForm onSubmit={handleSubmit} />
       </VStack>
     </Box>

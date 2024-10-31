@@ -1,18 +1,18 @@
+// models/user.ts
 import mongoose, { Document, Model } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 
-// Interface pour le document User
 interface IUser extends Document {
   id: string;
   name: string;
   email: string;
   password: string;
   role: 'user' | 'admin';
+  avatar?: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-// Schéma pour le modèle User
 const UserSchema = new mongoose.Schema({
   id: { 
     type: String, 
@@ -44,6 +44,10 @@ const UserSchema = new mongoose.Schema({
     type: String, 
     enum: ['user', 'admin'], 
     default: 'user' 
+  },
+  avatar: {
+    type: String,
+    default: ''
   }
 }, { 
   timestamps: true,
@@ -51,7 +55,6 @@ const UserSchema = new mongoose.Schema({
   toObject: { virtuals: true }
 });
 
-// Virtual pour les expertises de l'utilisateur
 UserSchema.virtual('expertises', {
   ref: 'Expertise',
   localField: '_id',
