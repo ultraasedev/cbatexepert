@@ -1,38 +1,43 @@
 // components/Sidebar.tsx
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
+  Box,
+  VStack,
+  HStack,
+  Text,
+  IconButton,
+  useDisclosure,
+  Drawer,
+  DrawerOverlay,
+  DrawerContent,
+  DrawerCloseButton,
+  DrawerBody,
+  useBreakpointValue,
+  Button,
+  Avatar,
+  Menu,
+  MenuButton,
+  MenuList,
+  MenuItem,
+  Portal,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
-  ModalFooter,
   ModalBody,
+  ModalFooter,
   ModalCloseButton,
-  Box, 
-  VStack, 
-  Text, 
-  IconButton, 
-  Tooltip, 
-  useMediaQuery, 
-  Collapse, 
-  Avatar,
-  Menu, 
-  MenuButton, 
-  MenuList, 
-  MenuItem as ChakraMenuItem, 
-  Portal, 
-  Badge, 
-  useDisclosure, 
   FormControl,
   FormLabel,
   Input,
-  Button,
-  useToast
+  useToast,
+  Divider,
+  Image,
+  Collapse,
+  useColorModeValue,
 } from '@chakra-ui/react';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '../lib/auth';
 import {
   MdDashboard,
   MdAssignment,
@@ -41,62 +46,108 @@ import {
   MdChevronLeft,
   MdChevronRight,
   MdMenu,
-  MdExpandMore,
   MdCameraAlt,
   MdEdit,
-  MdExitToApp
+  MdExitToApp,
+  MdKeyboardArrowDown,
+  MdKeyboardArrowRight,
+  MdPerson,
+  MdGroup,
+  MdHome,
 } from 'react-icons/md';
-import { IconType } from 'react-icons';
+import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '../lib/auth';
+import { motion } from 'framer-motion';
 
-interface MenuItemProps {
-  icon: IconType;
+const MotionBox = motion(Box);
+
+interface NavItem {
+  icon: any;
   label: string;
-  onClick: () => void;
-  count?: number;
+  path?: string;
+  children?: NavItem[];
+  adminOnly?: boolean;
 }
 
 export default function Sidebar() {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeGroup, setActiveGroup] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState('');
+  const [newPicture, setNewPicture] = useState<File | null>(null);
+  const [avatarSrc, setAvatarSrc] = useState('');
+
+  const drawer = useDisclosure();
+  const emailModal = useDisclosure();
+  const pictureModal = useDisclosure();
+
   const { user, logout, updateEmail, updateProfilePicture } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile] = useMediaQuery("(max-width: 768px)");
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const menuRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
 
-  // États pour les modals
-  const { isOpen: isEmailModalOpen, onOpen: onEmailModalOpen, onClose: onEmailModalClose } = useDisclosure();
-  const { isOpen: isPictureModalOpen, onOpen: onPictureModalOpen, onClose: onPictureModalClose } = useDisclosure();
-  const [newEmail, setNewEmail] = useState('');
-  const [newPicture, setNewPicture] = useState<File | null>(null);
-  const [avatarSrc, setAvatarSrc] = useState(user?.avatar);
+  const isMobile = useBreakpointValue({ base: true, lg: false });
+
+  // Thème et couleurs
+  const bgColor = useColorModeValue('white', 'gray.800');
+  const borderColor = useColorModeValue('gray.100', 'gray.700');
+  const hoverBgColor = useColorModeValue('blue.50', 'whiteAlpha.100');
+  const activeColor = '#000091';
+  const textColor = useColorModeValue('gray.700', 'gray.100');
 
   useEffect(() => {
-    setAvatarSrc(user?.avatar);
+    if (user?.avatar) {
+      setAvatarSrc(user.avatar);
+    }
   }, [user?.avatar]);
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
-  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
-  const toggleUserManagement = () => setIsUserManagementOpen(!isUserManagementOpen);
+  const navigation: NavItem[] = [
+    {
+      icon: MdHome,
+      label: 'Dashboard',
+      path: '/dashboard'
+    },
+    {
+      icon: MdAssignment,
+      label: 'Expertises',
+      children: [
+        { icon: MdAssignment, label: 'Liste des expertises', path: '/expertises' },
+        { icon: MdAddBox, label: 'Nouvelle expertise', path: '/expertises/new' }
+      ]
+    },
+    {
+      icon: MdAssignment,
+      label: "Plans d'aide",
+      children: [
+        { icon: MdAssignment, label: "Liste des plans", path: '/pda' },
+        { icon: MdAddBox, label: "Nouveau plan", path: '/pda/new' }
+      ]
+    },
+    {
+      icon: MdGroup,
+      label: 'Gestion Users',
+      adminOnly: true,
+      children: [
+        { icon: MdPerson, label: 'Liste des agents', path: '/guser/manage' },
+        { icon: MdAddBox, label: 'Créer un agent', path: '/guser/create' }
+      ]
+    }
+  ];
 
   const handleUpdateEmail = async () => {
     try {
       await updateEmail(newEmail);
       toast({
-        title: "Email mis à jour",
-        status: "success",
+        title: 'Email mis à jour',
+        status: 'success',
         duration: 3000,
         isClosable: true,
       });
-      onEmailModalClose();
+      emailModal.onClose();
+      setNewEmail('');
     } catch (error) {
-      console.error('Erreur lors de la mise à jour de l\'email:', error);
       toast({
-        title: "Erreur lors de la mise à jour de l'email",
-        status: "error",
+        title: "Erreur de mise à jour",
+        status: 'error',
         duration: 3000,
         isClosable: true,
       });
@@ -104,262 +155,437 @@ export default function Sidebar() {
   };
 
   const handleUpdatePicture = async () => {
-    if (newPicture) {
-      try {
-        const updatedUser = await updateProfilePicture(newPicture);
-        setAvatarSrc(updatedUser.avatar);
-        toast({
-          title: "Photo de profil mise à jour",
-          status: "success",
-          duration: 3000,
-          isClosable: true,
-        });
-        onPictureModalClose();
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour de la photo de profil:', error);
-        toast({
-          title: "Erreur lors de la mise à jour de la photo de profil",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      }
+    if (!newPicture) return;
+
+    try {
+      const updatedUser = await updateProfilePicture(newPicture);
+      setAvatarSrc(updatedUser.avatar);
+      toast({
+        title: 'Photo mise à jour',
+        status: 'success',
+        duration: 3000,
+        isClosable: true,
+      });
+      pictureModal.onClose();
+      setNewPicture(null);
+    } catch (error) {
+      toast({
+        title: "Erreur de mise à jour",
+        status: 'error',
+        duration: 3000,
+        isClosable: true,
+      });
     }
   };
-
-  const MenuItem: React.FC<MenuItemProps> = ({ icon: Icon, label, onClick, count }) => {
-    const isActive = pathname === onClick.toString();
-
-    return (
-      <Tooltip label={isCollapsed ? label : ''} placement="right" isDisabled={!isCollapsed}>
-        <Box 
-          display="flex" 
-          alignItems="center" 
-          w="100%" 
-          py={2}
-          px={4} 
-          cursor="pointer"
-          bg={isActive ? '#000091' : 'transparent'}
-          color={isActive ? 'white' : '#161616'}
-          _hover={{ bg: isActive ? '#000091' : 'gray.100' }}
-          onClick={onClick}
-          role="group"
-        >
-          <Icon 
-            size={20} 
-            style={{ 
-              marginRight: '12px', 
-              color: isActive ? 'white' : '#000091',
-            }} 
-          />
-          <Text 
-            flex={1} 
-            fontSize="sm" 
-            fontWeight={isActive ? 'bold' : 'normal'}
-          >
-            {label}
-          </Text>
-          {count !== undefined && (
-            <Badge colorScheme={isActive ? 'white' : 'green'} borderRadius="full" px={2} fontSize="xs">
-              {count}
-            </Badge>
-          )}
-        </Box>
-      </Tooltip>
-    )
-  }
-
-  const sidebarContent = (
-    <VStack align="stretch" spacing={1} height="100%">
-      <Box mb={6}>
-        <Text fontSize="xl" fontWeight="bold" color="#000091">ExpertBat</Text>
-      </Box>
-
-      <Text fontSize="xs" fontWeight="bold" color="#1212FF" mb={2} pl={4}>GENERAL</Text>
-      
-      <MenuItem icon={MdDashboard} label="Dashboard" onClick={() => router.push('/dashboard')}  />
-      <MenuItem icon={MdAssignment} label="Expertises" onClick={() => router.push('/expertises')} />
-      <MenuItem icon={MdAddBox} label="Nouvelle Expertise" onClick={() => router.push('/expertises/new')} />
-      <MenuItem icon={MdAssignment} label="Plans d'aide" onClick={() => router.push('/pda')} />
-      <MenuItem icon={MdAddBox} label="Nouveau Plan d'aide" onClick={() => router.push('/pda/new')} />
-
-      {user?.role === 'admin' && (
-        <>
-          <Text fontSize="xs" fontWeight="bold" color="#1212FF" mt={4} mb={2} pl={4}>ADMIN</Text>
-          <MenuItem icon={MdSettings} label="Gérer les Users" onClick={toggleUserManagement} />
-          <Collapse in={isUserManagementOpen || isCollapsed}>
-            <MenuItem icon={MdAddBox} label="Créer un Agent" onClick={() => router.push('/guser/create')} />
-            <MenuItem icon={MdSettings} label="Mes Agents" onClick={() => router.push('/guser/manage')} />
-          </Collapse>
+  const NavItemComponent = ({ item }: { item: NavItem }) => {
+    const isActive = item.path ? pathname === item.path : activeGroup === item.label;
+    const hasChildren = item.children && item.children.length > 0;
+    const isGroupOpen = activeGroup === item.label;
     
-        </>
-      )}
-
-      <Box flex="1" />
-
-      <Box 
-        display="flex" 
-        alignItems="center" 
-        p={2}
-        borderTop="1px solid"
-        borderColor="gray.200"
-        mt={2}
-      >
-        <Avatar size="xs" name={user?.name} src={avatarSrc} />
-        <Box ml={2} flex={1}>
-          <Text fontSize="xs" fontWeight="bold" noOfLines={1} color="#1212FF" >{user?.name}</Text>
-          <Text fontSize="xs" color="gray.500" noOfLines={1}>{user?.email}</Text>
-        </Box>
-        <Menu isOpen={isOpen} onClose={onClose}>
-          <MenuButton
-            as={IconButton}
-            aria-label="Options"
-            icon={<MdExpandMore />}
-            variant="ghost"
-            size="sm"
-            onClick={onOpen}
+    return (
+      <Box>
+        <MotionBox
+          as={Button}
+          variant="ghost"
+          width="full"
+          height="40px"
+          display="flex"
+          alignItems="center"
+          justifyContent={isCollapsed && !isMobile ? "center" : "flex-start"}
+          px={isCollapsed && !isMobile ? 0 : 3}
+          mb={1}
+          cursor="pointer"
+          color={isActive ? activeColor : textColor}
+          bg={isActive ? `${activeColor}10` : 'transparent'}
+          _hover={{ bg: hoverBgColor }}
+          onClick={() => {
+            if (hasChildren) {
+              setActiveGroup(isGroupOpen ? null : item.label);
+            } else if (item.path) {
+              router.push(item.path);
+              if (isMobile) drawer.onClose();
+            }
+          }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <Box 
+            as={item.icon} 
+            size={isCollapsed && !isMobile ? "24px" : "20px"} 
+            mr={isCollapsed && !isMobile ? 0 : 3} 
           />
+          {(!isCollapsed || isMobile) && (
+            <>
+              <Text flex={1} fontSize="sm" fontWeight={isActive ? 'semibold' : 'normal'}>
+                {item.label}
+              </Text>
+              {hasChildren && (
+                <Box 
+                  as={isGroupOpen ? MdKeyboardArrowDown : MdKeyboardArrowRight} 
+                  size="20px"
+                />
+              )}
+            </>
+          )}
+        </MotionBox>
+
+        {hasChildren && (!isCollapsed || isMobile) && (
+          <Collapse in={isGroupOpen}>
+            <VStack align="stretch" pl={6} mt={1} mb={2}>
+              {item.children.map((child, idx) => (
+                <Button
+                  key={idx}
+                  variant="ghost"
+                  width="full"
+                  height="36px"
+                  justifyContent="flex-start"
+                  px={3}
+                  fontSize="sm"
+                  color={pathname === child.path ? activeColor : textColor}
+                  bg={pathname === child.path ? `${activeColor}10` : 'transparent'}
+                  _hover={{ bg: hoverBgColor }}
+                  leftIcon={<Box as={child.icon} size="18px" />}
+                  onClick={() => {
+                    if (child.path) {
+                      router.push(child.path);
+                      if (isMobile) drawer.onClose();
+                    }
+                  }}
+                >
+                  {child.label}
+                </Button>
+              ))}
+            </VStack>
+          </Collapse>
+        )}
+      </Box>
+    );
+  };
+
+  const SidebarContent = () => (
+    <VStack h="100%" spacing={0}>
+      {/* Header */}
+      <HStack 
+        w="full" 
+        h="60px" 
+        px={isCollapsed ? 2 : 4} 
+        borderBottom="1px solid"
+        borderColor={borderColor}
+        justify={isCollapsed ? "center" : "space-between"}
+        position="relative"
+      >
+        {!isCollapsed ? (
+          <Text fontSize="xl" fontWeight="bold" color={activeColor}>
+            ExpertBat
+          </Text>
+        ) : (
+          <Text fontSize="xl" fontWeight="bold" color={activeColor}>
+            EB
+          </Text>
+        )}
+        {!isMobile && (
+          <IconButton
+            aria-label="Toggle sidebar"
+            icon={isCollapsed ? <MdChevronRight /> : <MdChevronLeft />}
+            size="sm"
+            variant="ghost"
+            position={isCollapsed ? "absolute" : "relative"}
+            right={isCollapsed ? "-12px" : "0"}
+            top={isCollapsed ? "20px" : "auto"}
+            transform={isCollapsed ? "translateX(50%)" : "none"}
+            borderRadius="full"
+            bg={bgColor}
+            boxShadow="sm"
+            _hover={{ bg: hoverBgColor }}
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            zIndex={2}
+          />
+        )}
+      </HStack>
+
+      {/* Profil utilisateur */}
+      <Box w="full" p={4} borderBottom="1px solid" borderColor={borderColor}>
+        <Menu>
+          <MenuButton
+            as={Button}
+            w="full"
+            h="auto"
+            p={2}
+            variant="ghost"
+            _hover={{ bg: hoverBgColor }}
+          >
+            <HStack 
+              spacing={3} 
+              justify={isCollapsed ? "center" : "flex-start"}
+              w="full"
+            >
+              <Avatar 
+                size={isCollapsed ? "md" : "sm"}
+                name={user?.name}
+                src={avatarSrc}
+              />
+              {!isCollapsed && (
+                <Box flex={1} textAlign="left">
+                  <Text 
+                    fontSize="sm" 
+                    fontWeight="medium" 
+                    noOfLines={1}
+                  >
+                    {user?.name}
+                  </Text>
+                  <Text 
+                    fontSize="xs" 
+                    color="gray.500" 
+                    noOfLines={1}
+                  >
+                    {user?.role === 'admin' ? 'Administrateur' : 'Utilisateur'}
+                  </Text>
+                </Box>
+              )}
+            </HStack>
+          </MenuButton>
           <Portal>
-            <MenuList onMouseEnter={onOpen} onMouseLeave={onClose} ref={menuRef}>
-              <ChakraMenuItem icon={<MdCameraAlt />} onClick={onPictureModalOpen}>
-                Changer la photo de profil
-              </ChakraMenuItem>
-              <ChakraMenuItem icon={<MdEdit />} onClick={onEmailModalOpen}>
+            <MenuList zIndex={1500}>
+              <MenuItem 
+                icon={<MdCameraAlt />} 
+                onClick={pictureModal.onOpen}
+                fontSize="sm"
+              >
+                Changer la photo
+              </MenuItem>
+              <MenuItem 
+                icon={<MdEdit />} 
+                onClick={emailModal.onOpen}
+                fontSize="sm"
+              >
                 Changer l'email
-              </ChakraMenuItem>
-              <ChakraMenuItem icon={<MdExitToApp />} onClick={logout}>
+              </MenuItem>
+              <Divider my={2} />
+              <MenuItem 
+                icon={<MdExitToApp />} 
+                onClick={logout}
+                fontSize="sm"
+                color="red.500"
+                _hover={{ bg: 'red.50' }}
+              >
                 Se déconnecter
-              </ChakraMenuItem>
+              </MenuItem>
             </MenuList>
           </Portal>
         </Menu>
       </Box>
+
+      {/* Navigation */}
+      <VStack 
+        flex={1} 
+        w="full" 
+        p={3} 
+        spacing={1} 
+        overflowY="auto"
+        css={{
+          '&::-webkit-scrollbar': {
+            width: '4px',
+          },
+          '&::-webkit-scrollbar-track': {
+            width: '6px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            background: borderColor,
+            borderRadius: '24px',
+          },
+        }}
+      >
+        {navigation.map((item, idx) => (
+          (!item.adminOnly || user?.role === 'admin') && (
+            <NavItemComponent key={idx} item={item} />
+          )
+        ))}
+      </VStack>
     </VStack>
   );
 
+  // Version mobile
   if (isMobile) {
     return (
       <>
-        <IconButton
-          aria-label="Open menu"
-          icon={<MdMenu />}
-          position="fixed"
-          top={4}
-          left={4}
-          zIndex={20}
-          onClick={toggleMobileSidebar}
-        />
         <Box
           position="fixed"
+          top={0}
           left={0}
-          top={0}
-          w="full"
-          h="full"
-          bg="rgba(0, 0, 0, 0.4)"
-          zIndex={10}
-          display={isMobileOpen ? "block" : "none"}
-          onClick={toggleMobileSidebar}
-        />
-        <Box
-          position="fixed"
-          left={isMobileOpen ? 0 : "-250px"}
-          top={0}
-          w="250px"
-          h="full"
-          bg="white"
-          zIndex={15}
-          transition="left 0.3s"
-          boxShadow="lg"
-          p={4}
-          overflowY="auto"
+          right={0}
+          h="60px"
+          bg={bgColor}
+          borderBottom="1px solid"
+          borderColor={borderColor}
+          px={4}
+          display="flex"
+          alignItems="center"
+          zIndex={1000}
         >
-          {sidebarContent}
+          <IconButton
+            aria-label="Menu"
+            icon={<MdMenu />}
+            onClick={drawer.onOpen}
+            variant="ghost"
+          />
+          <Text ml={3} fontSize="lg" fontWeight="bold" color={activeColor}>
+            ExpertBat
+          </Text>
         </Box>
+
+        <Drawer
+          isOpen={drawer.isOpen}
+          placement="left"
+          onClose={drawer.onClose}
+        >
+          <DrawerOverlay />
+          <DrawerContent>
+            <DrawerCloseButton />
+            <DrawerBody p={0}>
+              <SidebarContent />
+            </DrawerBody>
+          </DrawerContent>
+        </Drawer>
+
+        <Box h="60px" />
       </>
     );
   }
 
+  // Version desktop
   return (
     <>
       <Box
-        w={isCollapsed ? "60px" : "250px"}
-        bg="white"
-        minH="100vh"
-        boxShadow="lg"
-        p={4}
-        position="relative"
-        transition="width 0.3s"
-        overflowY="auto"
+        as="nav"
+        h="100vh"
+        w={isCollapsed ? "70px" : "260px"}
+        bg={bgColor}
+        borderRight="1px solid"
+        borderColor={borderColor}
+        position="sticky"
+        top={0}
+        transition="all 0.2s"
+        zIndex={1000}
       >
-        {sidebarContent}
-        <IconButton
-          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-          icon={isCollapsed ? <MdChevronRight /> : <MdChevronLeft />}
-          position="absolute"
-          top={2}
-          right={0}
-          zIndex={2}
-          size="sm"
-          boxShadow="md"
-          onClick={toggleSidebar}
-        />
+        <SidebarContent />
       </Box>
 
-      {/* Modal pour changer l'email */}
-      <Modal isOpen={isEmailModalOpen} onClose={onEmailModalClose}>
+      {/* Modal Email */}
+      <Modal 
+        isOpen={emailModal.isOpen} 
+        onClose={emailModal.onClose}
+        isCentered
+      >
         <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>Changer l'adresse email</ModalHeader>
+        <ModalContent mx={4}>
+          <ModalHeader>Changer l'email</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
             <FormControl>
-              <FormLabel>Nouvelle adresse email</FormLabel>
+              
+            <FormLabel>Nouvel email</FormLabel>
               <Input
                 type="email"
                 value={newEmail}
                 onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="Entrez votre nouvel email"
+                size="md"
               />
             </FormControl>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleUpdateEmail}>
+            <Button 
+              colorScheme="blue" 
+              mr={3} 
+              onClick={handleUpdateEmail}
+              isDisabled={!newEmail}
+            >
               Sauvegarder
             </Button>
-            <Button variant="ghost" onClick={onEmailModalClose}>Annuler</Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setNewEmail('');
+                emailModal.onClose();
+              }}
+            >
+              Annuler
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>
 
-      {/* Modal pour changer la photo de profil */}
-      <Modal isOpen={isPictureModalOpen} onClose={onPictureModalClose}>
+      {/* Modal Photo de profil */}
+      <Modal 
+        isOpen={pictureModal.isOpen} 
+        onClose={pictureModal.onClose}
+        isCentered
+      >
         <ModalOverlay />
-        <ModalContent>
+        <ModalContent mx={4}>
           <ModalHeader>Changer la photo de profil</ModalHeader>
           <ModalCloseButton />
           <ModalBody>
-            <FormControl>
-              <FormLabel>Nouvelle photo de profil</FormLabel>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setNewPicture(e.target.files?.[0] || null)}
-              />
-            </FormControl>
-            {newPicture && (
-              <Box mt={4}>
-                <img
-                  src={URL.createObjectURL(newPicture)}
-                  alt="Aperçu"
-                  style={{ maxWidth: '100%', maxHeight: '200px' }}
+            <VStack spacing={4}>
+              <FormControl>
+                <FormLabel>Nouvelle photo</FormLabel>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setNewPicture(e.target.files?.[0] || null)}
+                  p={1}
+                  variant="unstyled"
                 />
-              </Box>
-            )}
+              </FormControl>
+              {newPicture && (
+                <Box
+                  mt={2}
+                  borderRadius="md"
+                  overflow="hidden"
+                  boxShadow="sm"
+                  position="relative"
+                  width="100%"
+                >
+                  <Image
+                    src={URL.createObjectURL(newPicture)}
+                    alt="Aperçu"
+                    maxH="200px"
+                    w="full"
+                    objectFit="cover"
+                  />
+                  <IconButton
+                    aria-label="Supprimer l'image"
+                    icon={<MdExitToApp />}
+                    size="sm"
+                    position="absolute"
+                    top={2}
+                    right={2}
+                    colorScheme="red"
+                    onClick={() => setNewPicture(null)}
+                  />
+                </Box>
+              )}
+            </VStack>
           </ModalBody>
           <ModalFooter>
-            <Button colorScheme="blue" mr={3} onClick={handleUpdatePicture}>
+            <Button
+              colorScheme="blue"
+              mr={3}
+              onClick={handleUpdatePicture}
+              isDisabled={!newPicture}
+              loadingText="Sauvegarde..."
+            >
               Sauvegarder
             </Button>
-            <Button variant="ghost" onClick={onPictureModalClose}>Annuler</Button>
+            <Button 
+              variant="ghost" 
+              onClick={() => {
+                setNewPicture(null);
+                pictureModal.onClose();
+              }}
+            >
+              Annuler
+            </Button>
           </ModalFooter>
         </ModalContent>
       </Modal>

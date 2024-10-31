@@ -59,37 +59,32 @@ interface Expertise {
 export default function ExpertiseList() {
   const [expertises, setExpertises] = useState<Expertise[]>([]);
   const [filteredExpertises, setFilteredExpertises] = useState<Expertise[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
+  const [selectedUser, setSelectedUser] = useState<string>('');
   const [loading, setLoading] = useState(true);
-  const [agents, setAgents] = useState<User[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [expertiseToDelete, setExpertiseToDelete] = useState<string | null>(null);
   
   const { isOpen, onOpen, onClose } = useDisclosure();
   const router = useRouter();
   const { user, getAllUsers, getAuthHeaders } = useAuth();
   const toast = useToast();
-  const isInitialMount = useRef(true);
-
-  // Charger les expertises une seule fois au montage initial
+ 
+  // Chargement des expertises
   useEffect(() => {
     const loadExpertises = async () => {
       if (!user) return;
-
       try {
         const response = await fetch('/api/expertises', {
           headers: getAuthHeaders()
         });
-
-        if (!response.ok) {
-          throw new Error('Erreur lors de la récupération des expertises');
-        }
-
+ 
+        if (!response.ok) throw new Error('Erreur lors de la récupération des expertises');
+ 
         const result = await response.json();
-        const data: Expertise[] = result.data;
-        setExpertises(data);
-        setFilteredExpertises(user.role === 'admin' ? data : data.filter(exp => exp.createdBy.id === user.id));
+        setExpertises(result.data);
+        setFilteredExpertises(result.data);
       } catch (error) {
-        console.error('Erreur lors du chargement des expertises:', error);
+        console.error('Erreur:', error);
         toast({
           title: "Erreur de chargement",
           description: "Impossible de charger les données.",
@@ -101,37 +96,39 @@ export default function ExpertiseList() {
         setLoading(false);
       }
     };
-
-    if (isInitialMount.current && user) {
-      loadExpertises();
-      isInitialMount.current = false;
-    }
-  }, [user, toast, getAuthHeaders]);
-
-  // Charger les agents une seule fois si admin
+ 
+    loadExpertises();
+  }, [user, getAuthHeaders, toast]);
+ 
+  // Chargement des utilisateurs pour le filtre admin
   useEffect(() => {
-    const loadAgents = async () => {
-      if (user?.role === 'admin' && isInitialMount.current) {
+    const loadUsers = async () => {
+      if (user?.role === 'admin') {
         try {
-          const userList = await getAllUsers();
-          setAgents(userList.filter(u => u.role === 'user'));
+          const usersList = await getAllUsers();
+          // Filtrer pour ne garder que les users (non admin)
+          const filteredUsers = usersList.filter(u => u.role === 'user');
+          setUsers(filteredUsers);
         } catch (error) {
-          console.error('Erreur lors du chargement des agents:', error);
+          console.error('Erreur chargement users:', error);
         }
       }
     };
-
-    loadAgents();
-  }, [user?.role, getAllUsers]);
-
-  const handleAgentFilter = (agentId: string) => {
-    setSelectedAgent(agentId);
-    setFilteredExpertises(agentId 
-      ? expertises.filter(expertise => expertise.createdBy.id === agentId)
-      : expertises
-    );
+ 
+    loadUsers();
+  }, [user, getAllUsers]);
+ 
+  const handleUserFilter = (selectedUserId: string) => {
+    setSelectedUser(selectedUserId);
+    if (!selectedUserId) {
+      // Si aucun utilisateur sélectionné, afficher toutes les expertises
+      setFilteredExpertises(expertises);
+    } else {
+      // Filtrer les expertises pour l'utilisateur sélectionné
+      const filtered = expertises.filter(exp => exp.createdBy.id === selectedUserId);
+      setFilteredExpertises(filtered);
+    }
   };
-
   const handleDownloadPDF = async (expertiseId: string) => {
     try {
       const response = await fetch(`/api/expertises/${expertiseId}/pdf`, {
@@ -230,16 +227,20 @@ export default function ExpertiseList() {
           </Box>
 
           {user?.role === 'admin' && (
-            <Select 
-              placeholder="Filtrer par agent" 
-              onChange={(e) => handleAgentFilter(e.target.value)} 
-              value={selectedAgent}
-            >
-              <option value="">Tous les agents</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>{agent.name}</option>
-              ))}
-            </Select>
+             <Box mb={4}>
+             <Select
+               placeholder="Tous les utilisateurs"
+               value={selectedUser}
+               onChange={(e) => handleUserFilter(e.target.value)}
+             >
+               <option value="">Voir toutes les expertises</option>
+               {users.map((user) => (
+                 <option key={user.id} value={user.id}>
+                   {user.name}
+                 </option>
+               ))}
+             </Select>
+           </Box>
           )}
 
           {filteredExpertises.length === 0 ? (

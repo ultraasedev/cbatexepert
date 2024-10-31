@@ -127,19 +127,19 @@ export default function EditExpertisePage() {
 
   if (loading) {
     return (
-      <Box display="flex">
-        <Sidebar />
-        <Box flex="1">
-          <Container maxW="7xl" py={8}>
-            <VStack spacing={8} align="center" justify="center" minH="60vh">
-              <Spinner size="xl" thickness="4px" speed="0.65s" />
-              <Heading size="md" color="gray.500">
-                Chargement de l'expertise...
-              </Heading>
-            </VStack>
-          </Container>
-        </Box>
+      <Box display="flex" flexDir={{ base: 'column', md: 'row' }}>
+      <Sidebar />
+      <Box flex="1">
+        <Container maxW="7xl" py={{ base: 4, md: 8 }}>
+          <VStack spacing={8} align="center" justify="center" minH="60vh">
+            <Spinner size="xl" thickness="4px" speed="0.65s" />
+            <Heading size={{ base: 'sm', md: 'md' }} color="gray.500">
+              Chargement de l'expertise...
+            </Heading>
+          </VStack>
+        </Container>
       </Box>
+    </Box>
     );
   }
 
@@ -169,16 +169,26 @@ export default function EditExpertisePage() {
   }
 
   return (
-    <Box display="flex">
+    <Box display="flex" flexDir={{ base: 'column', md: 'row' }}>
       <Sidebar />
       <Box flex="1">
-        <Container maxW="7xl" py={8}>
-          <VStack spacing={8} align="stretch">
-            <HStack justify="space-between" align="center">
-              <VStack align="stretch" spacing={4}>
+        <Container 
+          maxW="7xl" 
+          py={{ base: 4, md: 8 }}
+          px={{ base: 2, sm: 4, md: 8 }}
+        >
+          <VStack spacing={{ base: 4, md: 8 }} align="stretch">
+            <HStack 
+              justify="space-between" 
+              align={{ base: 'flex-start', sm: 'center' }}
+              flexDir={{ base: 'column', sm: 'row' }}
+              gap={4}
+            >
+              <VStack align="stretch" spacing={{ base: 2, md: 4 }}>
                 <Breadcrumb 
                   spacing='8px' 
                   separator={<ChevronRightIcon color='gray.500' />}
+                  fontSize={{ base: 'sm', md: 'md' }}
                 >
                   <BreadcrumbItem>
                     <BreadcrumbLink onClick={handleCancel}>
@@ -189,7 +199,10 @@ export default function EditExpertisePage() {
                     <BreadcrumbLink>Modifier</BreadcrumbLink>
                   </BreadcrumbItem>
                 </Breadcrumb>
-                <Heading size="lg">
+                <Heading 
+                  size={{ base: 'md', md: 'lg' }}
+                  wordBreak="break-word"
+                >
                   Modifier l'expertise pour {`${expertise.beneficiaire?.nom || 'le bénéficiaire'}`}
                 </Heading>
               </VStack>

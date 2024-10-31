@@ -294,9 +294,16 @@ export function useAuth(): AuthReturn {
     }
   };
 
-  const getAuthHeaders = () => ({
-    'Authorization': `Bearer ${token}`,
-  });
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      throw new Error("Token manquant"); // Lever une erreur si le token est null
+    }
+    return {
+      'Authorization': `Bearer ${token}`,
+    };
+  };
+  
 
   return {
     user,

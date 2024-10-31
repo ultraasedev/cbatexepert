@@ -6,7 +6,11 @@ import {
   Box,
   FormControl,
   FormLabel,
-  Input,
+  Heading,
+  Input, 
+  InputGroup,
+  InputRightElement,
+  IconButton,
   Button,
   VStack,
   useToast,
@@ -16,6 +20,7 @@ import {
   Flex,
   useBreakpointValue
 } from '@chakra-ui/react';
+import { ViewIcon, ViewOffIcon } from "@chakra-ui/icons";
 import Sidebar from './Sidebar';
 
 interface FormData {
@@ -43,7 +48,7 @@ export default function CreateUser() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const toast = useToast();
-
+  const [showPassword, setShowPassword] = useState(false);
   // Responsive design variables
   const formWidth = useBreakpointValue({
     base: "90%",
@@ -149,80 +154,91 @@ export default function CreateUser() {
   };
 
   return (
-    <Flex width="100%" minHeight="100vh">
-      {/* Sidebar - Responsive */}
-      <Box display={{ base: 'none', md: 'block' }}>
-        <Sidebar />
-      </Box>
+    <Box minH="100vh" display="flex" flexDir={{ base: 'column', md: 'row' }}>
+      <Sidebar />
+      <Box 
+        flex="1" 
+        bg="gray.50" 
+        p={{ base: 4, sm: 6, md: 8 }}
+        width={{ base: '100%', md: 'auto' }}
+      >
+        <Container 
+          maxW={{ base: "100%", sm: "450px", md: "500px" }}
+          py={{ base: 4, md: 8 }}
+        >
+          <VStack spacing={6} align="stretch">
+            <Heading 
+              size={{ base: "md", md: "lg" }}
+              textAlign={{ base: "center", md: "left" }}
+            >
+              Créer un nouvel utilisateur
+            </Heading>
 
-      {/* Main Content */}
-      <Box flex="1" bg="gray.50">
-        <Container maxW="container.xl" py={{ base: 4, md: 8 }}>
-          <Flex 
-            direction="column" 
-            align="center" 
-            justify="center" 
-            minHeight="80vh"
-          >
             <Box
-              width={formWidth}
-              p={padding}
               bg="white"
+              p={{ base: 4, sm: 6, md: 8 }}
               borderRadius="lg"
               boxShadow="xl"
-              borderWidth={1}
-              borderColor="gray.200"
+              width="100%"
             >
-              <VStack spacing={4}>
+              <VStack spacing={5}>
                 <FormControl isInvalid={!!errors.name}>
-                  <FormLabel>Nom</FormLabel>
+                  <FormLabel fontSize={{ base: "sm", md: "md" }}>Nom</FormLabel>
                   <Input
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
                     placeholder="Entrez le nom"
-                    size="lg"
-                    bg="white"
+                    size={{ base: "md", md: "lg" }}
                   />
                   <FormErrorMessage>{errors.name}</FormErrorMessage>
                 </FormControl>
 
                 <FormControl isInvalid={!!errors.email}>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel fontSize={{ base: "sm", md: "md" }}>Email</FormLabel>
                   <Input
                     name="email"
                     type="email"
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Entrez l'email"
-                    size="lg"
-                    bg="white"
+                    size={{ base: "md", md: "lg" }}
                   />
                   <FormErrorMessage>{errors.email}</FormErrorMessage>
                 </FormControl>
 
                 <FormControl isInvalid={!!errors.password}>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <Input
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Entrez le mot de passe"
-                    size="lg"
-                    bg="white"
-                  />
+                  <FormLabel fontSize={{ base: "sm", md: "md" }}>
+                    Mot de passe
+                  </FormLabel>
+                  <InputGroup size={{ base: "md", md: "lg" }}>
+                    <Input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleChange}
+                      placeholder="Entrez le mot de passe"
+                    />
+                    <InputRightElement>
+                      <IconButton
+                        size="sm"
+                        aria-label={showPassword ? "Masquer" : "Afficher"}
+                        icon={showPassword ? <ViewOffIcon /> : <ViewIcon />}
+                        onClick={() => setShowPassword(!showPassword)}
+                        variant="ghost"
+                      />
+                    </InputRightElement>
+                  </InputGroup>
                   <FormErrorMessage>{errors.password}</FormErrorMessage>
                 </FormControl>
 
                 <FormControl isInvalid={!!errors.role}>
-                  <FormLabel>Rôle</FormLabel>
+                  <FormLabel fontSize={{ base: "sm", md: "md" }}>Rôle</FormLabel>
                   <Select
                     name="role"
                     value={formData.role}
                     onChange={handleChange}
-                    size="lg"
-                    bg="white"
+                    size={{ base: "md", md: "lg" }}
                   >
                     <option value="user">Utilisateur</option>
                     <option value="admin">Administrateur</option>
@@ -235,7 +251,7 @@ export default function CreateUser() {
                   colorScheme="blue"
                   isLoading={isSubmitting}
                   width="full"
-                  size="lg"
+                  size={{ base: "md", md: "lg" }}
                   mt={4}
                   onClick={handleSubmit}
                 >
@@ -243,9 +259,9 @@ export default function CreateUser() {
                 </Button>
               </VStack>
             </Box>
-          </Flex>
+          </VStack>
         </Container>
       </Box>
-    </Flex>
+    </Box>
   );
 }

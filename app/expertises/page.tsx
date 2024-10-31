@@ -1,34 +1,34 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import {
-  Box,
-  Heading,
-  Text,
-  VStack,
-  Spinner,
-  Table,
-  Thead,
-  Tbody,
-  Tr,
-  Th,
-  Td,
-  Button,
-  Select,
-  Menu,
-  MenuButton,
-  MenuList,
-  MenuItem,
-  useDisclosure,
-  Modal,
-  ModalOverlay,
-  ModalContent,
-  ModalHeader,
-  ModalFooter,
-  ModalBody,
-  ModalCloseButton,
-  useToast,
-  Badge
+ Box,
+ Heading,
+ Text,
+ VStack,
+ Spinner,
+ Table,
+ Thead,
+ Tbody,
+ Tr,
+ Th,
+ Td,
+ Button,
+ Select,
+ Menu,
+ MenuButton,
+ MenuList,
+ MenuItem,
+ useDisclosure,
+ Modal,
+ ModalOverlay,
+ ModalContent,
+ ModalHeader,
+ ModalFooter,
+ ModalBody,
+ ModalCloseButton,
+ useToast,
+ Badge
 } from '@chakra-ui/react';
 import { ChevronDownIcon, AddIcon } from '@chakra-ui/icons';
 import { useRouter } from 'next/navigation';
@@ -38,129 +38,120 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 interface Expertise {
-  _id: string;
-  typeLogement: string;
-  beneficiaire: {
-    nom: string;
-    adresse: string;
-  };
-  createdAt: string;
-  createdBy: string; // ID de l'utilisateur
-  status: string;
-  evaluations?: {
-    global?: {
-      condition: string;
-      score: number;
-    };
-  };
+ _id: string;
+ typeLogement: string;
+ beneficiaire: {
+   nom: string;
+   adresse: string;
+ };
+ createdAt: string;
+ createdBy: string;
+ status: string;
+ evaluations?: {
+   global?: {
+     condition: string;
+     score: number;
+   };
+ };
 }
 
 export default function ExpertiseList() {
-  const [expertises, setExpertises] = useState<Expertise[]>([]);
-  const [filteredExpertises, setFilteredExpertises] = useState<Expertise[]>([]);
-  const [selectedAgent, setSelectedAgent] = useState<string>('');
-  const [loading, setLoading] = useState(true);
-  const [agents, setAgents] = useState<User[]>([]);
-  const [expertiseToDelete, setExpertiseToDelete] = useState<string | null>(null);
-  
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  const router = useRouter();
-  const { user, getAllUsers, getAuthHeaders } = useAuth();
-  const toast = useToast();
-  const isInitialMount = useRef(true);
+ const [expertises, setExpertises] = useState<Expertise[]>([]);
+ const [filteredExpertises, setFilteredExpertises] = useState<Expertise[]>([]);
+ const [selectedAgent, setSelectedAgent] = useState<string>('');
+ const [loading, setLoading] = useState(true);
+ const [agents, setAgents] = useState<User[]>([]);
+ const [expertiseToDelete, setExpertiseToDelete] = useState<string | null>(null);
+ const isInitialMount = useRef(true);
+ const isInitialUserLoad = useRef(true);
+ 
+ const { isOpen, onOpen, onClose } = useDisclosure();
+ const router = useRouter();
+ const { user, getAllUsers, getAuthHeaders } = useAuth();
+ const toast = useToast();
 
-  useEffect(() => {
-    const loadExpertises = async () => {
-      if (!user) return;
+ useEffect(() => {
+   const loadExpertises = async () => {
+     if (!user) return;
+     try {
+       setLoading(true);
+       const response = await fetch('/api/expertises', {
+         headers: getAuthHeaders()
+       });
 
-      try {
-        setLoading(true);
-        console.log('Chargement des expertises...');
-        
-        const response = await fetch('/api/expertises', {
-          headers: getAuthHeaders()
-        });
+       if (!response.ok) throw new Error('Erreur lors de la récupération des expertises');
 
-        if (!response.ok) {
-          throw new Error('Erreur lors de la récupération des expertises');
-        }
+       const result = await response.json();
+       if (result.success && Array.isArray(result.data)) {
+         setExpertises(result.data);
+         setFilteredExpertises(result.data);
+       }
+     } catch (error) {
+       console.error('Erreur:', error);
+       toast({
+         title: "Erreur de chargement",
+         description: "Impossible de charger les expertises.",
+         status: "error",
+         duration: 3000,
+         isClosable: true,
+       });
+     } finally {
+       setLoading(false);
+     }
+   };
 
-        const result = await response.json();
-        console.log('Données reçues:', result);
+   if (isInitialMount.current && user) {
+     loadExpertises();
+     isInitialMount.current = false;
+   }
+ }, [user, getAuthHeaders, toast]);
 
-        if (result.success && Array.isArray(result.data)) {
-          const expertisesData = result.data as Expertise[];
-          console.log('Expertises récupérées:', expertisesData);
-
-          setExpertises(expertisesData);
-          if (user.role === 'admin') {
-            setFilteredExpertises(expertisesData);
-          } else {
-            const filtered = expertisesData.filter((exp: Expertise) => exp.createdBy === user.id);
-            setFilteredExpertises(filtered);
-          }
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des expertises:', error);
-        toast({
-          title: "Erreur de chargement",
-          description: "Impossible de charger les données.",
-          status: "error",
-          duration: 3000,
-          isClosable: true,
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (isInitialMount.current && user) {
-      loadExpertises();
-      isInitialMount.current = false;
+ const loadUsers = useCallback(async () => {
+  if (user?.role === 'admin' && isInitialUserLoad.current) {
+    try {
+      const allUsers = await getAllUsers();
+      setAgents(allUsers);
+      isInitialUserLoad.current = false;
+    } catch (error) {
+      console.error('Erreur chargement users:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger la liste des utilisateurs.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
     }
-  }, [user, getAuthHeaders, toast]);
+  }
+}, [user?.role, getAllUsers, toast]);
 
-  useEffect(() => {
-    const loadAgents = async () => {
-      if (user?.role === 'admin' && isInitialMount.current) {
-        try {
-          const userList = await getAllUsers();
-          const agentsList = userList.filter(u => u.role === 'user');
-          console.log('Agents chargés:', agentsList);
-          setAgents(agentsList);
-        } catch (error) {
-          console.error('Erreur lors du chargement des agents:', error);
-        }
-      }
-    };
+useEffect(() => {
+  if (user?.role === 'admin' && isInitialUserLoad.current) {
+    loadUsers();
+  }
+}, [loadUsers, user?.role]);
 
-    loadAgents();
-  }, [user?.role, getAllUsers]);
-
-  const handleAgentFilter = (agentId: string) => {
-    console.log('Filtrage par agent:', agentId);
-    setSelectedAgent(agentId);
-    
-    if (!agentId || agentId === '') {
-      setFilteredExpertises(expertises);
-    } else {
-      const filtered = expertises.filter((exp: Expertise) => exp.createdBy === agentId);
-      console.log('Expertises filtrées:', filtered);
-      setFilteredExpertises(filtered);
-    }
-  };
-
+ const handleAgentFilter = (agentId: string) => {
+   console.log('Filtrage par agent:', agentId);
+   setSelectedAgent(agentId);
+   
+   if (!agentId || agentId === '') {
+     setFilteredExpertises(expertises);
+   } else {
+     const filtered = expertises.filter(exp => exp.createdBy === agentId);
+     setFilteredExpertises(filtered);
+   }
+ };
   const handleDownloadPDF = async (expertiseId: string) => {
     try {
       const response = await fetch(`/api/expertises/${expertiseId}/pdf`, {
         headers: getAuthHeaders()
       });
-  
+    
       if (!response.ok) {
         throw new Error('Erreur lors de la génération du PDF');
       }
-  
-      // Vérifier si c'est un PDF
+    
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/pdf')) {
         const blob = await response.blob();
@@ -172,7 +163,7 @@ export default function ExpertiseList() {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-  
+    
         toast({
           title: "Téléchargement réussi",
           description: "Le PDF a été téléchargé avec succès.",
@@ -181,7 +172,6 @@ export default function ExpertiseList() {
           isClosable: true,
         });
       } else {
-        // Si ce n'est pas un PDF, c'est probablement une erreur JSON
         const errorData = await response.json();
         throw new Error(errorData.message || 'Erreur lors de la génération du PDF');
       }
@@ -234,14 +224,10 @@ export default function ExpertiseList() {
 
   const getConditionColor = (condition?: string) => {
     switch (condition) {
-      case 'Favorable':
-        return 'green';
-      case 'Correct':
-        return 'yellow';
-      case 'Critique':
-        return 'red';
-      default:
-        return 'gray';
+      case 'Favorable': return 'green';
+      case 'Correct': return 'yellow';
+      case 'Critique': return 'red';
+      default: return 'gray';
     }
   };
 
@@ -257,16 +243,25 @@ export default function ExpertiseList() {
   }
 
   return (
-    <Box display="flex">
+    <Box display="flex" flexDir={{ base: 'column', md: 'row' }}>
       <Sidebar />
-      <Box flex="1" p={8}>
-        <VStack align="stretch" spacing={6}>
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Heading>Expertises réalisées</Heading>
+      <Box  flex="1" 
+        p={{ base: 2, sm: 4, md: 8 }}
+        width={{ base: '100%', md: 'auto' }}>
+        <VStack  align="stretch" spacing={{ base: 4, md: 6 }}>
+        <Box 
+            display="flex" 
+            flexDir={{ base: 'column', sm: 'row' }}
+            gap={4}
+            justifyContent="space-between" 
+            alignItems={{ base: 'stretch', sm: 'center' }}
+          >
+            <Heading size={{ base: 'md', md: 'lg' }}>Expertises réalisées</Heading>
             <Button 
               leftIcon={<AddIcon />}
               colorScheme="blue" 
               onClick={() => router.push('/expertises/new')}
+              width={{ base: '100%', sm: 'auto' }}
             >
               Nouvelle Expertise
             </Button>
@@ -274,33 +269,66 @@ export default function ExpertiseList() {
 
           {user?.role === 'admin' && (
             <Select 
-              placeholder="Filtrer par agent" 
+              placeholder="Filtrer par utilisateur" 
               onChange={(e) => handleAgentFilter(e.target.value)} 
               value={selectedAgent}
-              maxW="300px"
+              maxW={{ base: '100%', md: '300px' }}
             >
-              <option value="">Tous les agents</option>
-              {agents.map((agent) => (
-                <option key={agent.id} value={agent.id}>{agent.name}</option>
+              <option value="">Tous les utilisateurs</option>
+              {agents.map((user) => (
+                <option key={user.id} value={user.id}>{user.name}</option>
               ))}
             </Select>
           )}
 
           {filteredExpertises.length === 0 ? (
-            <Box p={8} textAlign="center" bg="gray.50" borderRadius="md">
+            <Box p={4} textAlign="center" bg="gray.50" borderRadius="md">
               <Text>Aucune expertise n'a été réalisée pour le moment.</Text>
             </Box>
           ) : (
-            <Box overflowX="auto">
-              <Table variant="simple">
-                <Thead>
+            <Box 
+            overflowX="auto" 
+            mx={{ base: -2, sm: -4, md: 0 }}
+            sx={{
+              '@media screen and (max-width: 48em)': {
+                '.responsive-table': {
+                  display: 'block',
+                  'tr': {
+                    display: 'block',
+                    marginBottom: '1rem',
+                    boxShadow: 'sm',
+                    borderRadius: 'md',
+                    border: '1px solid',
+                    borderColor: 'gray.200',
+                  },
+                  'td': {
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    padding: '0.75rem',
+                    borderBottom: '1px solid',
+                    borderColor: 'gray.200',
+                    '&:before': {
+                      content: 'attr(data-label)',
+                      fontWeight: 'bold',
+                      marginRight: '1rem',
+                    },
+                  },
+                  'th': {
+                    display: 'none',
+                  },
+                },
+              },
+            }}
+          >
+               <Table variant="simple" className="responsive-table">
+               <Thead display={{ base: 'none', md: 'table-header-group' }}>
                   <Tr>
                     <Th>Date</Th>
                     <Th>Type</Th>
                     <Th>Bénéficiaire</Th>
                     <Th>Adresse</Th>
                     <Th>État</Th>
-                    {user?.role === 'admin' && <Th>Agent</Th>}
+                    {user?.role === 'admin' && <Th>Utilisateur</Th>}
                     <Th>Actions</Th>
                   </Tr>
                 </Thead>
@@ -312,18 +340,21 @@ export default function ExpertiseList() {
                       <Td>{expertise.beneficiaire.nom}</Td>
                       <Td>{expertise.beneficiaire.adresse}</Td>
                       <Td>
-                        <Badge 
-                          colorScheme={getConditionColor(expertise.evaluations?.global?.condition)}
-                        >
+                        <Badge colorScheme={getConditionColor(expertise.evaluations?.global?.condition)}>
                           {expertise.evaluations?.global?.condition || 'Non évalué'}
                         </Badge>
                       </Td>
                       {user?.role === 'admin' && (
-                        <Td>{agents.find(agent => agent.id === expertise.createdBy)?.name || 'N/A'}</Td>
+                        <Td>{agents.find(u => u.id === expertise.createdBy)?.name || 'N/A'}</Td>
                       )}
-                      <Td>
+                       <Td data-label="Actions">
                         <Menu>
-                          <MenuButton as={Button} rightIcon={<ChevronDownIcon />} size="sm">
+                          <MenuButton 
+                            as={Button} 
+                            rightIcon={<ChevronDownIcon />} 
+                            size="sm"
+                            width={{ base: '100%', md: 'auto' }}
+                          >
                             Actions
                           </MenuButton>
                           <MenuList>
@@ -334,7 +365,10 @@ export default function ExpertiseList() {
                               Modifier
                             </MenuItem>
                             <MenuItem 
-                              onClick={() => { setExpertiseToDelete(expertise._id); onOpen(); }} 
+                              onClick={() => { 
+                                setExpertiseToDelete(expertise._id); 
+                                onOpen(); 
+                              }} 
                               color="red.500"
                             >
                               Supprimer
