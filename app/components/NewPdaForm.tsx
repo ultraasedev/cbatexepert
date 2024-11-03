@@ -314,6 +314,7 @@ export default function NewPdaForm() {
             <option value="chauffage">Chauffage</option>
             <option value="ventilation">Ventilation</option>
             <option value="energie_renouvelable">Énergie renouvelable</option>
+            <option value="amelioration_divers">Amelioration Divers</option>
           </Select>
         </FormControl>
 

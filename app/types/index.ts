@@ -67,7 +67,7 @@ export interface Expertise {
   facade: {
     type: 'Enduit' | 'Peinture' | 'Pierre';
     epaisseurMurs: number;
-    dernierEntretien: number;
+    dernierEntretien: Date;
     etat: ConditionType;
   };
   tableauElectrique: {

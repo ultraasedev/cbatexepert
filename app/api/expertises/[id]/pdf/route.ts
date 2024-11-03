@@ -1,3 +1,5 @@
+// /app/api/expertises/[id]/pdf/route.ts
+
 import { NextRequest, NextResponse } from 'next/server';
 import connectDB from '../../../../lib/mongodb';
 import Expertise from '../../../../../models/expertise';
@@ -8,10 +10,7 @@ import 'jspdf-autotable';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET;
 
-if (!JWT_SECRET) {
-  throw new Error('JWT_SECRET must be defined');
-}
-
+// Interfaces
 interface JWTPayload {
   id: string;
   email: string;
@@ -19,6 +18,107 @@ interface JWTPayload {
   name: string;
 }
 
+interface RoomEvaluation {
+  windows?: number;
+  heating?: number;
+  humidity?: number;
+  ventilation?: number;
+}
+
+interface GlobalEvaluation {
+  score: number;
+  condition: 'Favorable' | 'Correct' | 'Critique';
+  comment: string;
+}
+
+interface IExpertise {
+  _id: any;
+  typeLogement: 'appartement' | 'maison';
+  beneficiaire: {
+    nom: string;
+    adresse: string;
+    telephone: string;
+  };
+  details: {
+    anneeConstruction: number;
+    superficie: number;
+    nombreEtages: number;
+  };
+  ouvertures: {
+    nombre: number;
+    typeVitrage: 'simple' | 'double';
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    anneeInstallation: number;
+  };
+  chauffage: {
+    type: 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
+    nombre: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    anneeInstallation: number;
+  };
+  humidite: {
+    taux: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  facade: {
+    type: 'Enduit' | 'Peinture' | 'Pierre';
+    epaisseurMurs: number;
+    dernierEntretien: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  tableauElectrique: {
+    type: 'Mono' | 'Triphasé';
+    anneePose: number;
+    presenceLinky: boolean;
+    auxNormes: boolean;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  ventilation: {
+    type: 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
+    nombreBouches: number;
+    piecesEquipees: string;
+    ventilationNaturelle: boolean;
+    anneePose: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  isolation: {
+    type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
+    pose: 'Sous rampants' | 'En soufflage' | 'En rouleau';
+    epaisseur: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+    presenceCondensation: boolean;
+    localisationCondensation?: string;
+    tauxHumiditeCombles: number;
+    etatCombles: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  charpente: {
+    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
+    presenceArtive: boolean;
+    entretienEffectue: boolean;
+    dateEntretien?: Date;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  toiture: {
+    type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
+    typeFaitage: 'Cimente' | 'En Boîte';
+    dateEntretien: Date;
+    typeEntretien: string;
+    presenceImpuretes: boolean;
+    annee: number;
+    etat: 'Bon' | 'Moyen' | 'Mauvais';
+  };
+  evaluations: {
+    rooms: {
+      [key: string]: RoomEvaluation;
+    };
+    global: GlobalEvaluation;
+  };
+  createdBy: any;
+  status: 'En cours' | 'Terminé';
+  createdAt: Date | string;
+}
+
+// Fonctions utilitaires
 const authenticateToken = (request: NextRequest) => {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -27,36 +127,81 @@ const authenticateToken = (request: NextRequest) => {
     const token = authHeader.split(' ')[1];
     if (!token) return null;
 
-    const decoded = jwt.verify(token, JWT_SECRET as string) as JWTPayload;
-    return decoded;
+    return jwt.verify(token, JWT_SECRET!) as JWTPayload;
   } catch (error) {
     logger.error(`Erreur lors de la vérification du token: ${error}`);
     return null;
   }
 };
 
-// Fonction pour calculer le score final
-const calculateFinalScore = (expertise: any): string => {
-  // Si un score global existe déjà, l'utiliser
-  if (expertise.evaluations?.global?.score) {
-    return Number(expertise.evaluations.global.score).toFixed(1);
+const calculateScore = (etat: 'Bon' | 'Moyen' | 'Mauvais'): number => {
+  switch (etat) {
+    case 'Bon': return 5;
+    case 'Moyen': return 3;
+    case 'Mauvais': return 1;
+    default: return 0;
   }
-
-  // Sinon, calculer à partir des évaluations des pièces
-  const roomEvaluations = expertise.evaluations?.rooms || {};
-  let totalScore = 0;
-  let evaluationCount = 0;
-
-  Object.values(roomEvaluations).forEach((room: any) => {
-    if (typeof room.windows === 'number') { totalScore += room.windows; evaluationCount++; }
-    if (typeof room.heating === 'number') { totalScore += room.heating; evaluationCount++; }
-    if (typeof room.humidity === 'number') { totalScore += room.humidity; evaluationCount++; }
-    if (typeof room.ventilation === 'number') { totalScore += room.ventilation; evaluationCount++; }
-  });
-
-  return evaluationCount > 0 ? (totalScore / evaluationCount).toFixed(1) : '0.0';
 };
 
+const calculateGlobalScore = (expertise: IExpertise): number => {
+  const elements = [
+    expertise.ouvertures.etat,
+    expertise.chauffage.etat,
+    expertise.humidite.etat,
+    expertise.facade.etat,
+    expertise.tableauElectrique.etat,
+    expertise.ventilation.etat,
+    expertise.isolation.etat,
+    expertise.isolation.etatCombles,
+    expertise.charpente.etat,
+    expertise.toiture.etat
+  ];
+
+  const totalScore = elements.reduce((sum, etat) => sum + calculateScore(etat), 0);
+  return totalScore / elements.length;
+};
+
+const generateRecommendations = (expertise: IExpertise): string => {
+  const recommendations: string[] = [];
+
+  if (expertise.ouvertures.etat === 'Mauvais') {
+    recommendations.push(`• Les ouvertures (${expertise.ouvertures.nombre} en ${expertise.ouvertures.typeVitrage}) nécessitent une rénovation`);
+  }
+
+  if (expertise.chauffage.etat === 'Mauvais') {
+    recommendations.push(`• Le système de chauffage ${expertise.chauffage.type} installé en ${expertise.chauffage.anneeInstallation} nécessite une intervention`);
+  }
+
+  if (expertise.humidite.etat === 'Mauvais') {
+    recommendations.push(`• Problème d'humidité important (${expertise.humidite.taux}%) nécessitant une action corrective`);
+  }
+
+  if (expertise.isolation.etat === 'Mauvais' || expertise.isolation.etatCombles === 'Mauvais') {
+    recommendations.push(`• L'isolation (${expertise.isolation.type}) nécessite une amélioration` +
+      (expertise.isolation.presenceCondensation ? `\n  - Présence de condensation dans les combles (${expertise.isolation.tauxHumiditeCombles}% d'humidité)` : ''));
+  }
+
+  if (expertise.ventilation.etat === 'Mauvais') {
+    recommendations.push(`• La ventilation ${expertise.ventilation.type} nécessite une révision ou un remplacement`);
+  }
+
+  if (!expertise.tableauElectrique.auxNormes || expertise.tableauElectrique.etat === 'Mauvais') {
+    recommendations.push(`• L'installation électrique nécessite une mise aux normes`);
+  }
+
+  if (expertise.toiture.etat === 'Mauvais') {
+    recommendations.push(`• La toiture (${expertise.toiture.type}) présente des signes de dégradation` +
+      (expertise.toiture.presenceImpuretes ? '\n  - Présence d\'impuretés nécessitant un nettoyage' : ''));
+  }
+
+  if (recommendations.length === 0) {
+    return "Aucun problème majeur n'a été détecté. Un entretien régulier est recommandé pour maintenir l'état actuel du bâtiment.";
+  }
+
+  return `Points nécessitant une attention particulière:\n\n${recommendations.join('\n\n')}`;
+};
+
+// Route principale
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB();
@@ -69,195 +214,244 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const expertise = await Expertise.findById(params.id)
+    const expertiseData = await Expertise.findById(params.id)
       .populate('createdBy', 'name email id');
 
-    if (!expertise) {
-      logger.error('Expertise non trouvée');
+    if (!expertiseData) {
       return NextResponse.json(
         { success: false, message: 'Expertise non trouvée' },
         { status: 404 }
       );
     }
+    
 
-    if (expertise.createdBy.toString() !== user.id && user.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, message: 'Non autorisé' },
-        { status: 403 }
-      );
-    }
+    const rawData = expertiseData.toObject() as Omit<IExpertise, '_id'> & { _id: { toString(): string } };
+    
+    const expertise: IExpertise = {
+      ...rawData,
+      _id: rawData._id.toString(),
+      createdAt: rawData.createdAt instanceof Date 
+        ? rawData.createdAt.toISOString() 
+        : rawData.createdAt,
+      createdBy: rawData.createdBy?.toString() || rawData.createdBy
+    };
 
+    // Création du PDF
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.width;
+    const pageHeight = doc.internal.pageSize.height;
     const margin = 20;
     let yPosition = margin;
 
+    const addNewPage = () => {
+      doc.addPage();
+      yPosition = margin;
+    };
+
+    const checkPageBreak = (height: number) => {
+      if (yPosition + height > pageHeight - margin) {
+        addNewPage();
+        return true;
+      }
+      return false;
+    };
+
     // En-tête
+    doc.setFillColor(44, 82, 130);
+    doc.rect(0, 0, pageWidth, 40, 'F');
+    doc.setTextColor(255);
     doc.setFontSize(24);
-    doc.setTextColor(44, 82, 130);
-    doc.text("Rapport d'expertise", pageWidth / 2, yPosition, { align: 'center' });
+    doc.text("RAPPORT D'EXPERTISE", pageWidth / 2, 25, { align: 'center' });
+    doc.setFontSize(14);
+    doc.text(expertise.typeLogement.toUpperCase(), pageWidth / 2, 35, { align: 'center' });
+    yPosition = 50;
+
+    // Référence et date
+    doc.setFontSize(10);
+    doc.setTextColor(100);
+    doc.text(`Référence : EXP-${params.id.slice(-6)}`, margin, yPosition);
+    doc.text(`Date : ${new Date().toLocaleDateString('fr-FR')}`, pageWidth - margin, yPosition, { align: 'right' });
     yPosition += 20;
 
-    // Informations générales
-    doc.setFontSize(12);
+    // Informations bénéficiaire
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin - 5, yPosition - 5, pageWidth - 2 * (margin - 5), 45, 'F');
+    doc.setTextColor(44, 82, 130);
+    doc.setFontSize(16);
+    doc.text("INFORMATIONS BÉNÉFICIAIRE", margin, yPosition + 5);
     doc.setTextColor(0);
-    doc.text(`Date: ${new Date().toLocaleDateString('fr-FR')}`, margin, yPosition);
+    doc.setFontSize(11);
+    doc.text([
+      `Nom : ${expertise.beneficiaire.nom}`,
+      `Adresse : ${expertise.beneficiaire.adresse}`,
+      `Téléphone : ${expertise.beneficiaire.telephone}`
+    ], margin + 5, yPosition + 20);
+    yPosition += 55;
+
+    // Caractéristiques du bien
+    doc.setFillColor(240, 240, 240);
+    doc.rect(margin - 5, yPosition - 5, pageWidth - 2 * (margin - 5), 45, 'F');
+    doc.setTextColor(44, 82, 130);
+    doc.setFontSize(16);
+    doc.text("CARACTÉRISTIQUES DU BIEN", margin, yPosition + 5);
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    doc.text([
+      `Type : ${expertise.typeLogement}`,
+      `Année de construction : ${expertise.details.anneeConstruction}`,
+      `Superficie : ${expertise.details.superficie} m²`,
+      `Nombre d'étages : ${expertise.details.nombreEtages}`
+    ], margin + 5, yPosition + 20);
+    yPosition += 55;
+
+    // Évaluations techniques
+    checkPageBreak(300);
+    doc.setFillColor(240, 240, 240);
+
+    // Tableau des évaluations
+    doc.setTextColor(44, 82, 130);
+    doc.setFontSize(16);
+    doc.text("ÉVALUATIONS TECHNIQUES", margin, yPosition);
     yPosition += 15;
 
-    // Section Bénéficiaire
-    doc.setFontSize(18);
-    doc.setTextColor(44, 82, 130);
-    doc.text("Informations du bénéficiaire", margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text(`Nom: ${expertise.beneficiaire?.nom || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Adresse: ${expertise.beneficiaire?.adresse || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Téléphone: ${expertise.beneficiaire?.telephone || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 15;
-
-    // Section Logement
-    doc.setFontSize(18);
-    doc.setTextColor(44, 82, 130);
-    doc.text("Détails du logement", margin, yPosition);
-    yPosition += 10;
-
-    doc.setFontSize(12);
-    doc.setTextColor(0);
-    doc.text(`Type: ${expertise.typeLogement || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Année de construction: ${expertise.details?.anneeConstruction || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Superficie: ${expertise.details?.superficie ? expertise.details.superficie + ' m²' : 'Non renseigné'}`, margin, yPosition);
-    yPosition += 8;
-    doc.text(`Nombre d'étages: ${expertise.details?.nombreEtages || 'Non renseigné'}`, margin, yPosition);
-    yPosition += 20;
-
-    // Nouvelle page pour l'évaluation
-    doc.addPage();
-    yPosition = margin;
-
-    // Évaluation globale
-    doc.setFontSize(24);
-    doc.setTextColor(44, 82, 130);
-    doc.text("Évaluation globale", margin, yPosition);
-    yPosition += 25;
-
-    // Calcul du score moyen et récupération des évaluations
-    const roomEvaluations = expertise.evaluations?.rooms || {};
-    let totalScore = 0;
-    let evaluationCount = 0;
-
-    Object.values(roomEvaluations).forEach(room => {
-      if (room.windows) { totalScore += room.windows; evaluationCount++; }
-      if (room.heating) { totalScore += room.heating; evaluationCount++; }
-      if (room.humidity) { totalScore += room.humidity; evaluationCount++; }
-      if (room.ventilation) { totalScore += room.ventilation; evaluationCount++; }
+    // @ts-ignore
+    doc.autoTable({
+      startY: yPosition,
+      head: [['Élément', 'État', 'Détails']],
+      body: [
+        ['Ouvertures', expertise.ouvertures.etat, `${expertise.ouvertures.nombre} ouvertures - ${expertise.ouvertures.typeVitrage}`],
+        ['Chauffage', expertise.chauffage.etat, expertise.chauffage.type],
+        ['Ventilation', expertise.ventilation.etat, expertise.ventilation.type],
+        ['Isolation', expertise.isolation.etat, `${expertise.isolation.type} - ${expertise.isolation.pose}`],
+        ['Toiture', expertise.toiture.etat, expertise.toiture.type],
+        ['Installation électrique', expertise.tableauElectrique.etat, `${expertise.tableauElectrique.type}${expertise.tableauElectrique.auxNormes ? ' - Aux normes' : ' - Non conforme'}`]
+      ],
+      styles: { 
+        fontSize: 10,
+        cellPadding: 5
+      },
+      headStyles: {
+        fillColor: [44, 82, 130],
+        textColor: [255, 255, 255]
+      },
+      alternateRowStyles: {
+        fillColor: [240, 240, 240]
+      }
     });
 
-    // Calcul du score final
-    const finalScore = evaluationCount > 0 ? (totalScore / evaluationCount).toFixed(1) : 
-                      expertise.evaluations?.global?.score?.toFixed(1) || '0.0';
+    // @ts-ignore
+    yPosition = doc.lastAutoTable.finalY + 20;
 
-    // Détermination de la condition basée sur le score
-    let condition = expertise.evaluations?.global?.condition;
-    if (!condition) {
-      const score = parseFloat(finalScore);
-      condition = score >= 4 ? 'Favorable' : 
-                 score >= 2.5 ? 'Correct' : 'Critique';
-    }
+    // Évaluation globale
+    checkPageBreak(150);
+    const globalScore = calculateGlobalScore(expertise);
+    const scoreColor = globalScore >= 4 ? [46, 204, 113] : 
+                      globalScore >= 2.5 ? [241, 196, 15] : 
+                      [231, 76, 60];
 
-    // Score et État
-    const scoreColor = condition === 'Favorable' 
-      ? [46, 204, 113]  // vert
-      : condition === 'Correct'
-      ? [241, 196, 15]  // jaune
-      : [231, 76, 60];  // rouge
-
-    // Affichage du score
-    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-    doc.circle(50, yPosition - 5, 15, 'F');
-    doc.setTextColor(255);
-    doc.setFontSize(16);
-    doc.text(finalScore.toString(), 43, yPosition);
-
-    // État général
-    doc.setTextColor(0);
-    doc.setFontSize(14);
-    doc.text("État général:", 80, yPosition);
-    
-    // Badge pour la condition
-    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
-    doc.roundedRect(150, yPosition - 15, 80, 20, 3, 3, 'F');
-    doc.setTextColor(255);
-    doc.text(condition, 155, yPosition);
-
-    yPosition += 30;
-
-    // Recommandations
     doc.setTextColor(44, 82, 130);
     doc.setFontSize(18);
-    doc.text("Recommandations:", margin, yPosition);
-    yPosition += 10;
+    doc.text("ÉVALUATION GLOBALE", margin, yPosition);
+    yPosition += 20;
 
-    // Mise en forme des recommandations
-    doc.setFontSize(12);
-    doc.setTextColor(60);
-    const maxWidth = pageWidth - (2 * margin);
+    // Score dans un cercle
+    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    // Score dans un cercle
+    doc.circle(pageWidth / 2, yPosition + 15, 25, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(20);
+    doc.text(globalScore.toFixed(1), pageWidth / 2, yPosition + 20, { align: 'center' });
+    yPosition += 50;
+
+    // État général
+    const condition = globalScore >= 4 ? 'FAVORABLE' : 
+                     globalScore >= 2.5 ? 'CORRECT' : 'CRITIQUE';
+
+    doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
+    doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 30, 3, 3, 'F');
+    doc.text(condition, pageWidth / 2, yPosition + 20, { align: 'center' });
+    yPosition += 45;
+
+    // Section recommandations
+    checkPageBreak(200);
+    doc.setTextColor(44, 82, 130);
+    doc.setFontSize(16);
+    doc.text("RECOMMANDATIONS", margin, yPosition);
+    yPosition += 15;
+
+    doc.setTextColor(0);
+    doc.setFontSize(11);
+    const recommendations = generateRecommendations(expertise);
+    const splitRecommendations = doc.splitTextToSize(recommendations, pageWidth - 2 * margin);
     
-    // Récupération du commentaire de l'évaluation globale
-    const recommendations = expertise.evaluations?.global?.comment || (() => {
-      // Si pas de commentaire, générer un commentaire basé sur le score
-      const score = parseFloat(finalScore);
-      if (score >= 4) {
-        return "L'état général du bâtiment est très satisfaisant. Les installations sont bien entretenues et performantes.";
-      } else if (score >= 2.5) {
-        return "L'état général du bâtiment est correct mais nécessite quelques améliorations ciblées pour optimiser son confort et ses performances.";
-      } else {
-        return "L'état général du bâtiment nécessite des travaux de rénovation importants. Une intervention est recommandée pour améliorer le confort et l'efficacité énergétique.";
-      }
-    })();
-
-    const splitRecommendations = doc.splitTextToSize(recommendations, maxWidth);
-
-    // Fond pour les recommandations
+    // Fond gris clair pour les recommandations
     doc.setFillColor(245, 245, 245);
-    doc.roundedRect(margin - 5, yPosition - 5, maxWidth + 10, 
-                   (splitRecommendations.length * 7) + 10, 2, 2, 'F');
+    doc.rect(margin - 5, yPosition - 5, pageWidth - 2 * (margin - 5), 
+             splitRecommendations.length * 7 + 10, 'F');
+    
+    doc.text(splitRecommendations, margin, yPosition);
+    yPosition += splitRecommendations.length * 7 + 20;
 
-    // Texte des recommandations
-    doc.setTextColor(60);
-    doc.text(splitRecommendations, margin, yPosition + 5);
+    // Priorités d'intervention
+    let priorityText = "";
+    const urgentIssues = [
+      expertise.toiture.etat === 'Mauvais',
+      expertise.tableauElectrique.etat === 'Mauvais' && !expertise.tableauElectrique.auxNormes,
+      expertise.humidite.etat === 'Mauvais' && expertise.humidite.taux > 70,
+      expertise.charpente.etat === 'Mauvais'
+    ].filter(Boolean).length;
 
-    // Pied de page
-    doc.setFontSize(10);
-    doc.setTextColor(128);
-    doc.text(
-      `Document généré le ${new Date().toLocaleDateString('fr-FR')}`,
-      margin,
-      doc.internal.pageSize.height - 20
-    );
+    if (urgentIssues >= 2) {
+      priorityText = "INTERVENTION PRIORITAIRE RECOMMANDÉE";
+      doc.setFillColor(231, 76, 60);  // Rouge
+    } else if (urgentIssues === 1) {
+      priorityText = "INTERVENTION CONSEILLÉE À COURT TERME";
+      doc.setFillColor(241, 196, 15);  // Jaune
+    } else {
+      priorityText = "ENTRETIEN RÉGULIER RECOMMANDÉ";
+      doc.setFillColor(46, 204, 113);  // Vert
+    }
 
-    // Pagination sur toutes les pages
+    doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 20, 3, 3, 'F');
+    doc.setTextColor(255);
+    doc.setFontSize(14);
+    doc.text(priorityText, pageWidth / 2, yPosition + 13, { align: 'center' });
+
+    // Pied de page sur toutes les pages
     const totalPages = doc.getNumberOfPages();
     for(let i = 1; i <= totalPages; i++) {
       doc.setPage(i);
-      doc.setFontSize(10);
-      doc.setTextColor(128);
+      doc.setFillColor(44, 82, 130);
+      doc.rect(0, pageHeight - 20, pageWidth, 20, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(255);
+      
+      // Date de génération
       doc.text(
-        `Page ${i} sur ${totalPages}`,
+        `Document généré le ${new Date().toLocaleDateString('fr-FR')}`,
+        margin,
+        pageHeight - 8
+      );
+      
+      // Numéro de page
+      doc.text(
+        `Page ${i} / ${totalPages}`,
+        pageWidth - margin,
+        pageHeight - 8,
+        { align: 'right' }
+      );
+
+      // Référence au centre
+      doc.text(
+        `Expertise ${params.id}`,
         pageWidth / 2,
-        doc.internal.pageSize.height - 10,
+        pageHeight - 8,
         { align: 'center' }
       );
     }
 
-    // Convertir en buffer et retourner
+    // Générer et retourner le PDF
     const pdfBuffer = Buffer.from(doc.output('arraybuffer'));
-
     return new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
