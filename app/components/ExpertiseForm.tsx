@@ -52,7 +52,8 @@ import type {
   IsolationType,
   IsolationPose,
   StateSelectorProps,
-  FormDataDetails
+  FormDataDetails,
+  ExpertiseStatus,
 } from '@/app/types';
 
 // Constantes typées
@@ -530,12 +531,52 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
   };
 
   const handleConditionUpdate = (index: number, field: string, condition: ConditionType): void => {
-    if (field.includes('.')) {
-      const [mainField, subField] = field.split('.');
-      handleRoomUpdate(index, `${mainField}.condition`, condition);
-    } else {
-      handleRoomUpdate(index, `${field}Condition`, condition);
-    }
+    setFormData(prev => {
+      const newRooms = [...prev.details.rooms];
+      
+      // Cas spéciaux pour windows et heating qui ont leur condition dans un sous-objet
+      if (field === 'windows') {
+        newRooms[index] = {
+          ...newRooms[index],
+          windows: {
+            ...newRooms[index].windows,
+            condition: condition
+          }
+        };
+      } else if (field === 'heating') {
+        newRooms[index] = {
+          ...newRooms[index],
+          heating: {
+            ...newRooms[index].heating,
+            condition: condition
+          }
+        };
+      } 
+      // Si c'est un champ qui a son propre objet (comme isolation, toiture, etc.)
+      else if (field === 'isolation' || field === 'charpente' || field === 'toiture' || field === 'facades') {
+        newRooms[index] = {
+          ...newRooms[index],
+          [field]: {
+            ...newRooms[index][field],
+            condition: condition
+          }
+        };
+      } else {
+        // Pour les champs qui utilisent directement xxxCondition
+        newRooms[index] = {
+          ...newRooms[index],
+          [`${field}Condition`]: condition
+        };
+      }
+  
+      return {
+        ...prev,
+        details: {
+          ...prev.details,
+          rooms: newRooms
+        }
+      };
+    });
   };
 
   const fetchAddressSuggestions = async (input: string): Promise<void> => {
@@ -630,48 +671,50 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
   };
   const validateExpertiseData = (formData: FormData): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
-
+  
     if (!formData.typeLogement) errors.push('Le type de logement est requis');
     
     if (!formData.details.beneficiary.firstName) errors.push('Le prénom du bénéficiaire est requis');
     if (!formData.details.beneficiary.lastName) errors.push('Le nom du bénéficiaire est requis');
     if (!formData.details.beneficiary.address) errors.push('L\'adresse du bénéficiaire est requise');
     if (!formData.details.beneficiary.phone) errors.push('Le téléphone du bénéficiaire est requis');
-
+  
     if (!formData.details.construction.year) errors.push('L\'année de construction est requise');
     if (!formData.details.construction.area) errors.push('La superficie est requise');
     if (formData.details.construction.floors < 0) errors.push('Le nombre d\'étages doit être positif');
-
+  
     if (!formData.details.rooms.length) errors.push('Au moins une pièce est requise');
     formData.details.rooms.forEach((room, index) => {
       if (!room.type) errors.push(`Le type de la pièce ${index + 1} est requis`);
     });
-
+  
     // Validation de l'isolation
     if (!formData.details.isolation.combles.type) errors.push('Le type d\'isolation des combles est requis');
     if (!formData.details.isolation.combles.installation) errors.push('Le type d\'installation des combles est requis');
     if (!formData.details.isolation.murs.type) errors.push('Le type d\'isolation des murs est requis');
     if (!formData.details.isolation.murs.installation) errors.push('Le type d\'installation des murs est requis');
-
+  
     // Validation de l'isolation du sol si sous-sol présent
     if (formData.details.rooms.some(room => room.type === 'Sous-sol')) {
       if (!formData.details.isolation.sols?.type) errors.push('Le type d\'isolation du sol est requis');
       if (!formData.details.isolation.sols?.installation) errors.push('Le type d\'installation du sol est requis');
     }
-
+  
     return {
       isValid: errors.length === 0,
       errors
     };
   };
-
+  
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
     if (!user) {
       router.push('/login');
       return;
     }
-
+  
+    setLoading(true);
+    
     try {
       calculateNewScore();
       
@@ -680,55 +723,158 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         throw new Error(`Validation échouée: ${validation.errors.join(', ')}`);
       }
 
-       // Construction de dataToSend avec la structure correcte
-       const dataToSend: FormData = {
-        typeLogement: formData.typeLogement,
-        details: {
-          beneficiary: formData.details.beneficiary,
-          construction: {
-            year: Number(formData.details.construction.year),
-            area: Number(formData.details.construction.area),
-            floors: Number(formData.details.construction.floors)
-          },
-          rooms: formData.details.rooms,
-          facades: formData.details.facades,
-          electrical: formData.details.electrical,
-          isolation: {
-            combles: {
-              type: formData.details.isolation.combles.type,
-              installation: formData.details.isolation.combles.installation,
-              thickness: formData.details.isolation.combles.thickness,
-              condition: formData.details.isolation.combles.condition,
-              hasCondensation: formData.details.isolation.combles.hasCondensation,
-              condensationLocations: formData.details.isolation.combles.condensationLocations,
-              humidityRate: formData.details.isolation.combles.humidityRate
-            },
-            murs: {
-              type: formData.details.isolation.murs.type,
-              installation: formData.details.isolation.murs.installation,
-              thickness: formData.details.isolation.murs.thickness,
-              condition: formData.details.isolation.murs.condition
-            },
-            sols: formData.details.isolation.sols,
-            condition: formData.details.isolation.condition
-          },
-          framework: formData.details.framework,
-          roof: formData.details.roof
-        },
-        evaluations: {
-          rooms: formData.evaluations.rooms,
-          global: {
-            score: evaluationScore,
-            condition: formData.evaluations.global.condition,
-            comment: formData.evaluations.global.comment
-          }
-        }
+      // Fonctions helper
+const dateToTimestamp = (dateString: string): number => {
+  return new Date(dateString).getTime();
+};
+
+  
+      // Fonctions helper pour trouver les premières pièces avec équipements
+      const getFirstRoomWithWindows = () => {
+        return formData.details.rooms.find(room => room.windows.count > 0);
       };
-
-      if (onSubmit) {
-        await onSubmit(dataToSend);
+  
+      const getFirstRoomWithHeating = () => {
+        return formData.details.rooms.find(room => room.heating.types.length > 0);
+      };
+  
+      const firstRoomWithWindows = getFirstRoomWithWindows();
+      const firstRoomWithHeating = getFirstRoomWithHeating();
+  
+      // Construction des données pour l'API
+const expertiseData = {
+  typeLogement: formData.typeLogement,
+  beneficiaire: {
+    nom: `${formData.details.beneficiary.firstName} ${formData.details.beneficiary.lastName}`,
+    adresse: formData.details.beneficiary.address,
+    telephone: formData.details.beneficiary.phone
+  },
+  details: {
+    anneeConstruction: Number(formData.details.construction.year),
+    superficie: Number(formData.details.construction.area),
+    nombreEtages: Number(formData.details.construction.floors)
+  },
+  ouvertures: {
+    nombre: firstRoomWithWindows ? firstRoomWithWindows.windows.count : 0,
+    typeVitrage: firstRoomWithWindows ? firstRoomWithWindows.windows.type : 'simple',
+    etat: firstRoomWithWindows ? firstRoomWithWindows.windows.condition : 'Moyen',
+    anneeInstallation: firstRoomWithWindows ? 
+      firstRoomWithWindows.windows.installationYear : 
+      Number(formData.details.construction.year)
+  },
+  chauffage: {
+    type: firstRoomWithHeating?.heating.types[0] || 'Électrique',
+    nombre: formData.details.rooms.reduce((count, room) => 
+      count + (room.heating.types.length > 0 ? 1 : 0), 0),
+    etat: firstRoomWithHeating?.heating.condition || 'Moyen',
+    anneeInstallation: firstRoomWithHeating?.heating.installationYear || 
+      Number(formData.details.construction.year)
+  },
+  humidite: {
+    taux: formData.details.rooms[0]?.humidity || 0,
+    etat: formData.details.rooms[0]?.humidityCondition || 'Moyen'
+  },
+  facade: {
+    type: formData.details.facades[0].type,
+    epaisseurMurs: Number(formData.details.facades[0].thickness),
+    dernierEntretien: dateToTimestamp(formData.details.facades[0].lastMaintenance),
+    etat: formData.details.facades[0].condition
+  },
+  tableauElectrique: {
+    type: formData.details.electrical.type,
+    anneePose: Number(formData.details.electrical.installationYear),
+    presenceLinky: formData.details.electrical.hasLinky,
+    auxNormes: formData.details.electrical.upToStandards,
+    etat: formData.details.electrical.condition
+  },
+  ventilation: {
+    type: formData.details.rooms[0]?.ventilation[0] || 'VMC Simple flux',
+    nombreBouches: formData.details.rooms.reduce((count, room) => 
+      count + (room.ventilation.length > 0 ? 1 : 0), 0),
+    piecesEquipees: formData.details.rooms
+      .filter(r => r.ventilation.length > 0)
+      .map(r => r.type)
+      .join(', '),
+    ventilationNaturelle: true,
+    anneePose: Number(formData.details.construction.year),
+    etat: formData.details.rooms[0]?.ventilationCondition || 'Moyen'
+  },
+  isolation: {
+    type: formData.details.isolation.combles.type,
+    pose: formData.details.isolation.combles.installation,
+    epaisseur: Number(formData.details.isolation.combles.thickness),
+    etat: formData.details.isolation.combles.condition,
+    presenceCondensation: formData.details.isolation.combles.hasCondensation,
+    localisationCondensation: formData.details.isolation.combles.condensationLocations[0] || '',
+    tauxHumiditeCombles: Number(formData.details.isolation.combles.humidityRate),
+    etatCombles: formData.details.isolation.combles.condition
+  },
+  charpente: {
+    type: formData.details.framework.type,
+    presenceArtive: formData.details.framework.hasBeam,
+    entretienEffectue: formData.details.framework.hadMaintenance,
+    dateEntretien: formData.details.framework.maintenanceDate ? 
+      dateToTimestamp(formData.details.framework.maintenanceDate) : 
+      null,
+    etat: formData.details.framework.condition
+  },
+  toiture: {
+    type: formData.details.roof.type,
+    typeFaitage: formData.details.roof.ridgeType,
+    dateEntretien: dateToTimestamp(formData.details.roof.maintenanceDate),
+    typeEntretien: formData.details.roof.maintenanceType,
+    presenceImpuretes: formData.details.roof.hasImpurities,
+    annee: Number(formData.details.roof.installationYear),
+    etat: formData.details.roof.condition
+  },
+  evaluations: {
+    rooms: formData.evaluations.rooms,
+    global: {
+      score: evaluationScore,
+      condition: formData.evaluations.global.condition,
+      comment: formData.evaluations.global.comment
+    }
+  },
+  status: 'En cours' as ExpertiseStatus
+};
+  
+      // Si c'est une édition
+      if (isEditing && initialData?._id) {
+        const headers = getAuthHeaders();
+        const response = await fetch(`/api/expertises/${initialData._id}`, {
+          method: 'PUT',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(expertiseData),
+        });
+  
+        if (!response.ok) {
+          throw new Error('Erreur lors de la mise à jour');
+        }
+      } 
+      // Si c'est une nouvelle expertise
+      else {
+        const headers = getAuthHeaders();
+        const response = await fetch('/api/expertises', {
+          method: 'POST',
+          headers: {
+            ...headers,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(expertiseData),
+        });
+  
+        if (!response.ok) {
+          throw new Error('Erreur lors de la création');
+        }
       }
-
+  
+      if (onSubmit) {
+        await onSubmit(formData);
+      }
+  
       toast({
         title: "Succès",
         description: `L'expertise a été ${isEditing ? 'modifiée' : 'créée'} avec succès`,
@@ -736,7 +882,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         duration: 5000,
         isClosable: true,
       });
-
+  
       router.push('/expertises');
     } catch (error) {
       console.error('Erreur:', error);
@@ -1540,7 +1686,7 @@ const StateSelector: React.FC<StateSelectorProps> = ({
           {formData.details.rooms.some(room => room.type === 'Sous-sol') && (
             <Card width="100%">
               <CardHeader>
-                <Heading size="sm">Isolation du sol</Heading>
+                <Heading size="sm">Isolation du Sous-Sol</Heading>
               </CardHeader>
               <CardBody>
                 <VStack spacing={4}>
@@ -1853,183 +1999,183 @@ const StateSelector: React.FC<StateSelectorProps> = ({
         </VStack>
       );
       case 12:
-      return (
-        <VStack spacing={6} align="stretch" width="100%">
-          <Heading size="md" mb={4}>État détaillé par pièce et éléments généraux</Heading>
-          
-          {/* État des combles */}
-          <Card width="100%">
-            <CardHeader>
-              <Heading size="sm">État des combles</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack spacing={6} align="stretch">
-                <FormControl>
-                  <FormLabel htmlFor="combles-humidity">Taux d'humidité des combles (%)</FormLabel>
-                  <NumberInput
-                    id="combles-humidity"
-                    name="combles-humidity"
-                    value={formData.details.isolation.combles.humidityRate}
-                    min={0}
-                    max={100}
-                    onChange={(value) => handleIsolationUpdate('combles', 'humidityRate', parseInt(value))}
-                  >
-                    <NumberInputField height="50px" fontSize="lg" />
-                  </NumberInput>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel htmlFor="combles-condensation">Présence de condensation</FormLabel>
-                  <Checkbox
-                    id="combles-condensation"
-                    name="combles-condensation"
-                    size="lg"
-                    isChecked={formData.details.isolation.combles.hasCondensation}
-                    onChange={(e) => handleIsolationUpdate('combles', 'hasCondensation', e.target.checked)}
-                  >
-                    <Text fontSize="lg">Condensation détectée</Text>
-                  </Checkbox>
-                </FormControl>
-
-                {formData.details.isolation.combles.hasCondensation && (
-                  <FormControl>
-                    <FormLabel htmlFor="combles-condensation-location">
-                      Localisation de la condensation
-                    </FormLabel>
-                    <Input
-                      id="combles-condensation-location"
-                      name="combles-condensation-location"
-                      height="50px"
-                      fontSize="lg"
-                      value={formData.details.isolation.combles.condensationLocations[0] || ''}
-                      onChange={(e) => handleIsolationUpdate('combles', 'condensationLocations', [e.target.value])}
-                      placeholder="Décrivez la localisation de la condensation"
-                    />
-                  </FormControl>
-                )}
-
-                <StateSelector
-                  label="État général des combles"
-                  currentValue={formData.details.isolation.combles.condition}
-                  onChange={(value) => handleIsolationUpdate('combles', 'condition', value)}
-                  fieldId="combles-condition"
-                />
-              </VStack>
-            </CardBody>
-          </Card>
-
-          {/* État par pièce */}
-          {formData.details.rooms.map((room, index) => {
-            const roomId = room.id;
-            const roomName = room.name || `${room.type} ${index + 1}`;
+        return (
+          <VStack spacing={6} align="stretch" width="100%">
+            <Heading size="md" mb={4}>État détaillé par pièce et éléments généraux</Heading>
             
-            return (
-              <Card key={roomId} width="100%">
-                <CardHeader>
-                  <Heading size="sm">
-                    {roomName}{' '}
-                    {room.floor > 0 ? `(Étage ${room.floor})` : "(RDC)"}
-                  </Heading>
-                </CardHeader>
-                <CardBody>
-                  {/* Ouvertures */}
-                  {room.windows.count > 0 && (
-                    <StateSelector
-                      label="État des ouvertures"
-                      description={`${room.windows.count} ${room.windows.count > 1 ? 'ouvertures' : 'ouverture'} - 
-                        ${room.windows.type === 'simple' ? 'Simple vitrage' : 'Double vitrage'} (${room.windows.installationYear})`}
-                      currentValue={room.windows.condition}
-                      onChange={(value) => handleConditionUpdate(index, "windows", value)}
-                      fieldId={`${roomId}-windows-condition`}
-                    />
-                  )}
-
-                  {/* Chauffage */}
-                  {room.heating.types.length > 0 && (
-                    <StateSelector
-                      label="État du chauffage"
-                      description={`Types installés: ${room.heating.types.join(', ')}`}
-                      currentValue={room.heating.condition}
-                      onChange={(value) => handleConditionUpdate(index, "heating", value)}
-                      fieldId={`${roomId}-heating-condition`}
-                    />
-                  )}
-
-                  {/* Humidité */}
-                  <Box p={4} borderWidth="1px" borderRadius="md">
-                    <Text fontWeight="bold" fontSize="lg" mb={4}>Humidité</Text>
-                    <FormControl mb={4}>
-                      <FormLabel htmlFor={`${roomId}-humidity-rate`}>
-                        Taux d'humidité (%)
+            {/* État des combles */}
+            <Card width="100%">
+              <CardHeader>
+                <Heading size="sm">État des combles</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={6} align="stretch">
+                  <FormControl>
+                    <FormLabel htmlFor="combles-humidity">Taux d'humidité des combles (%)</FormLabel>
+                    <NumberInput
+                      id="combles-humidity"
+                      name="combles-humidity"
+                      value={formData.details.isolation.combles.humidityRate}
+                      min={0}
+                      max={100}
+                      onChange={(value) => handleIsolationUpdate('combles', 'humidityRate', parseInt(value))}
+                    >
+                      <NumberInputField height="50px" fontSize="lg" />
+                    </NumberInput>
+                  </FormControl>
+      
+                  <FormControl>
+                    <FormLabel htmlFor="combles-condensation">Présence de condensation</FormLabel>
+                    <Checkbox
+                      id="combles-condensation"
+                      name="combles-condensation"
+                      size="lg"
+                      isChecked={formData.details.isolation.combles.hasCondensation}
+                      onChange={(e) => handleIsolationUpdate('combles', 'hasCondensation', e.target.checked)}
+                    >
+                      <Text fontSize="lg">Condensation détectée</Text>
+                    </Checkbox>
+                  </FormControl>
+      
+                  {formData.details.isolation.combles.hasCondensation && (
+                    <FormControl>
+                      <FormLabel htmlFor="combles-condensation-location">
+                        Localisation de la condensation
                       </FormLabel>
-                      <NumberInput
-                        id={`${roomId}-humidity-rate`}
-                        name={`${roomId}-humidity-rate`}
-                        value={room.humidity}
-                        min={0}
-                        max={100}
-                        onChange={(value) => handleRoomUpdate(index, "humidity", parseInt(value))}
-                      >
-                        <NumberInputField height="50px" fontSize="lg" />
-                      </NumberInput>
+                      <Input
+                        id="combles-condensation-location"
+                        name="combles-condensation-location"
+                        height="50px"
+                        fontSize="lg"
+                        value={formData.details.isolation.combles.condensationLocations[0] || ''}
+                        onChange={(e) => handleIsolationUpdate('combles', 'condensationLocations', [e.target.value])}
+                        placeholder="Décrivez la localisation de la condensation"
+                      />
                     </FormControl>
-                    
+                  )}
+      
+                  <StateSelector
+                    label="État général des combles"
+                    currentValue={formData.details.isolation.combles.condition}
+                    onChange={(value) => handleIsolationUpdate('combles', 'condition', value)}
+                    fieldId="combles-condition"
+                  />
+                </VStack>
+              </CardBody>
+            </Card>
+      
+            {/* État par pièce */}
+            {formData.details.rooms.map((room, index) => {
+              const roomId = room.id;
+              const roomName = room.name || `${room.type} ${index + 1}`;
+              
+              return (
+                <Card key={roomId} width="100%">
+                  <CardHeader>
+                    <Heading size="sm">
+                      {roomName}{' '}
+                      {room.floor > 0 ? `(Étage ${room.floor})` : "(RDC)"}
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    {/* Ouvertures */}
+                    {room.windows.count > 0 && (
+                      <StateSelector
+                        label="État des ouvertures"
+                        description={`${room.windows.count} ${room.windows.count > 1 ? 'ouvertures' : 'ouverture'} - 
+                          ${room.windows.type === 'simple' ? 'Simple vitrage' : 'Double vitrage'} (${room.windows.installationYear})`}
+                        currentValue={room.windows.condition}
+                        onChange={(value) => handleConditionUpdate(index, "windows", value)}
+                        fieldId={`${roomId}-windows-condition`}
+                      />
+                    )}
+      
+                    {/* Chauffage */}
+                    {room.heating.types.length > 0 && (
+                      <StateSelector
+                        label="État du chauffage"
+                        description={`Types installés: ${room.heating.types.join(', ')}`}
+                        currentValue={room.heating.condition}
+                        onChange={(value) => handleConditionUpdate(index, "heating", value)}
+                        fieldId={`${roomId}-heating-condition`}
+                      />
+                    )}
+      
+                    {/* Humidité */}
+                    <Box p={4} borderWidth="1px" borderRadius="md">
+                      <Text fontWeight="bold" fontSize="lg" mb={4}>Humidité</Text>
+                      <FormControl mb={4}>
+                        <FormLabel htmlFor={`${roomId}-humidity-rate`}>
+                          Taux d'humidité (%)
+                        </FormLabel>
+                        <NumberInput
+                          id={`${roomId}-humidity-rate`}
+                          name={`${roomId}-humidity-rate`}
+                          value={room.humidity}
+                          min={0}
+                          max={100}
+                          onChange={(value) => handleRoomUpdate(index, "humidity", parseInt(value))}
+                        >
+                          <NumberInputField height="50px" fontSize="lg" />
+                        </NumberInput>
+                      </FormControl>
+                      
+                      <StateSelector
+                        currentValue={room.humidityCondition}
+                        onChange={(value) => handleConditionUpdate(index, "humidity", value)}
+                        fieldId={`${roomId}-humidity-condition`}
+                        mb={0}
+                      />
+                    </Box>
+      
+                    {/* Ventilation */}
                     <StateSelector
-                      currentValue={room.humidityCondition}
-                      onChange={(value) => handleConditionUpdate(index, "humidity", value)}
-                      fieldId={`${roomId}-humidity-condition`}
-                      mb={0}
+                      label="État de la ventilation"
+                      description={room.ventilation.length > 0 ? 
+                        `Types installés: ${room.ventilation.join(', ')}` : 
+                        'Aucune ventilation'}
+                      currentValue={room.ventilationCondition}
+                      onChange={(value) => handleConditionUpdate(index, "ventilation", value)}
+                      fieldId={`${roomId}-ventilation-condition`}
                     />
-                  </Box>
-
-                  {/* Ventilation */}
-                  <StateSelector
-                    label="État de la ventilation"
-                    description={room.ventilation.length > 0 ? 
-                      `Types installés: ${room.ventilation.join(', ')}` : 
-                      'Aucune ventilation'}
-                    currentValue={room.ventilationCondition}
-                    onChange={(value) => handleConditionUpdate(index, "ventilation", value)}
-                    fieldId={`${roomId}-ventilation-condition`}
-                  />
-
-                  {/* Isolation */}
-                  <StateSelector
-                    label="État de l'isolation"
-                    currentValue={room.isolation.condition}
-                    onChange={(value) => handleConditionUpdate(index, "isolation", value)}
-                    fieldId={`${roomId}-isolation-condition`}
-                  />
-
-                  {/* Charpente */}
-                  <StateSelector
-                    label="État de la charpente"
-                    currentValue={room.charpente?.condition || 'Moyen'}
-                    onChange={(value) => handleConditionUpdate(index, "charpente", value)}
-                    fieldId={`${roomId}-charpente-condition`}
-                  />
-
-                  {/* Toiture */}
-                  <StateSelector
-                    label="État de la toiture"
-                    currentValue={room.toiture?.condition || 'Moyen'}
-                    onChange={(value) => handleConditionUpdate(index, "toiture", value)}
-                    fieldId={`${roomId}-toiture-condition`}
-                  />
-
-                  {/* Façades */}
-                  <StateSelector
-                    label="État des façades"
-                    currentValue={room.facades?.condition || 'Moyen'}
-                    onChange={(value) => handleConditionUpdate(index, "facades", value)}
-                    fieldId={`${roomId}-facades-condition`}
-                  />
-                </CardBody>
-              </Card>
-            );
-          })}
-        </VStack>
-      );
+      
+                    {/* Isolation */}
+                    <StateSelector
+                      label="État de l'isolation"
+                      currentValue={room.isolation.condition}
+                      onChange={(value) => handleConditionUpdate(index, "isolation", value)}
+                      fieldId={`${roomId}-isolation-condition`}
+                    />
+      
+                    {/* Charpente */}
+                    <StateSelector
+                      label="État de la charpente"
+                      currentValue={room.charpente.condition}
+                      onChange={(value) => handleConditionUpdate(index, "charpente", value)}
+                      fieldId={`${roomId}-charpente-condition`}
+                    />
+      
+                    {/* Toiture */}
+                    <StateSelector
+                      label="État de la toiture"
+                      currentValue={room.toiture.condition}
+                      onChange={(value) => handleConditionUpdate(index, "toiture", value)}
+                      fieldId={`${roomId}-toiture-condition`}
+                    />
+      
+                    {/* Façades */}
+                    <StateSelector
+                      label="État des façades"
+                      currentValue={room.facades.condition}
+                      onChange={(value) => handleConditionUpdate(index, "facades", value)}
+                      fieldId={`${roomId}-facades-condition`}
+                    />
+                  </CardBody>
+                </Card>
+              );
+            })}
+          </VStack>
+        );
 
       case 13:
         return (

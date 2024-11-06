@@ -106,20 +106,18 @@ export default function ManageUsers() {
       const response = await fetch("/api/user", {
         headers: getAuthHeaders(),
       });
-
+  
       if (!response.ok) {
         if (response.status === 401) {
           router.push("/login");
           return;
         }
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Erreur lors de la récupération des utilisateurs"
-        );
+        throw new Error("Erreur lors de la récupération des utilisateurs");
       }
-
+  
       const data = await response.json();
       if (data.success) {
+        console.log('Utilisateurs reçus:', data.data);
         setUsers(data.data);
       } else {
         throw new Error(data.message);
@@ -137,10 +135,11 @@ export default function ManageUsers() {
       setLoading(false);
     }
   };
+  
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, []); 
 
   const handleEditUser = (user: User) => {
     setSelectedUser({
@@ -235,6 +234,7 @@ export default function ManageUsers() {
   };
 
   const handleDeleteClick = (userId: string, userName: string) => {
+    console.log('ID à supprimer:', userId);
     setUserToDelete({ id: userId, name: userName });
     onDeleteAlertOpen();
   };
@@ -242,21 +242,29 @@ export default function ManageUsers() {
   const handleDeleteConfirm = async () => {
     if (!userToDelete) return;
 
+    console.log('Tentative de suppression de l\'utilisateur:', userToDelete);
+  
     try {
-      const response = await fetch("/api/user", {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          ...getAuthHeaders(),
-        },
-        body: JSON.stringify({ userId: userToDelete.id }),
+      // Assurez-vous que les en-têtes sont corrects
+      const headers = {
+        "Content-Type": "application/json",
+        ...getAuthHeaders()
+      };
+  
+      const response = await fetch('/api/user', {
+        method: 'DELETE',
+        headers: headers,
+        body: JSON.stringify({ 
+          userId: userToDelete.id // Utiliser l'UUID généré
+        })
       });
-
+      
+  
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.message || "Erreur lors de la suppression");
       }
-
+  
       const data = await response.json();
       if (data.success) {
         toast({
@@ -266,14 +274,13 @@ export default function ManageUsers() {
           duration: 5000,
           isClosable: true,
         });
-        fetchUsers();
-      } else {
-        throw new Error(data.message);
+        fetchUsers(); // Rafraîchir la liste
       }
     } catch (error: any) {
+      console.error('Erreur lors de la suppression:', error);
       toast({
         title: "Erreur",
-        description: error.message,
+        description: error.message || "Erreur lors de la suppression",
         status: "error",
         duration: 5000,
         isClosable: true,

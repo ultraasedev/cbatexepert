@@ -186,32 +186,32 @@ async function handleRegister(data: {
 }
 
 export async function GET(request: NextRequest) {
- const user = authenticateToken(request);
+  const user = authenticateToken(request);
 
- if (!user || user.role !== 'admin') {
-   return NextResponse.json(
-     { success: false, message: 'Accès non autorisé' },
-     { status: 401 }
-   );
- }
+  if (!user || user.role !== 'admin') {
+    return NextResponse.json(
+      { success: false, message: 'Accès non autorisé' },
+      { status: 401 }
+    );
+  }
 
- try {
-   await dbConnect();
-   const users = await User.find({}, 'id name email role');
+  try {
+    await dbConnect();
+    const users = await User.find({}, 'id _id name email role');
+    console.log('Utilisateurs trouvés:', users);
 
-   return NextResponse.json({
-     success: true,
-     data: users
-   });
- } catch (error: any) {
-   console.error('Erreur lors de la récupération des utilisateurs:', error);
-   return NextResponse.json(
-     { success: false, message: 'Erreur serveur' },
-     { status: 500 }
-   );
- }
+    return NextResponse.json({
+      success: true,
+      data: users
+    });
+  } catch (error: any) {
+    console.error('Erreur lors de la récupération des utilisateurs:', error);
+    return NextResponse.json(
+      { success: false, message: 'Erreur serveur' },
+      { status: 500 }
+    );
+  }
 }
-
 export async function POST(request: NextRequest) {
  const data = await request.json();
 
@@ -415,25 +415,49 @@ export async function PUT(request: NextRequest) {
   }
 }
 export async function DELETE(request: NextRequest) {
- try {
-   await dbConnect();
-   const { userId } = await request.json();
-   
-   const user = authenticateToken(request);
-   if (!user || user.role !== 'admin') {
-     return NextResponse.json({ success: false, message: 'Non autorisé' }, { status: 401 });
-   }
+  try {
+    await dbConnect();
+    const { userId } = await request.json();
+    console.log('ID reçu pour suppression:', userId);
+    
+    const user = authenticateToken(request);
+    if (!user || user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Non autorisé' },
+        { status: 401 }
+      );
+    }
 
-   const userToDelete = await User.findOne({ id: userId });
-   if (!userToDelete) {
-     return NextResponse.json({ success: false, message: 'Utilisateur non trouvé' }, { status: 404 });
-   }
+    // Rechercher d'abord l'utilisateur pour vérifier son existence
+    const userExists = await User.findOne({ id: userId });
+    console.log('Utilisateur trouvé:', userExists);
 
-   await User.findOneAndDelete({ id: userId });
+    if (!userExists) {
+      // Si non trouvé avec id, essayer avec _id
+      const userExistsById = await User.findById(userId);
+      console.log('Utilisateur trouvé par _id:', userExistsById);
 
-   return NextResponse.json({ success: true, message: 'Utilisateur supprimé avec succès' });
- } catch (error: any) {
-   console.error('Erreur lors de la suppression:', error);
-   return NextResponse.json({ success: false, message: error.message }, { status: 500 });
- }
+      if (!userExistsById) {
+        return NextResponse.json(
+          { success: false, message: 'Utilisateur non trouvé' },
+          { status: 404 }
+        );
+      }
+
+      await User.findByIdAndDelete(userId);
+    } else {
+      await User.findOneAndDelete({ id: userId });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Utilisateur supprimé avec succès' 
+    });
+  } catch (error: any) {
+    console.error('Erreur détaillée:', error);
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 500 }
+    );
+  }
 }

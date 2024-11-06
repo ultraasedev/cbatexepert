@@ -52,21 +52,30 @@ export interface GlobalEvaluation {
   comment: string;
 }
 
-// Interface pour les configurations des pièces
-export interface WindowsConfig {
-  count: number;
-  type: 'simple' | 'double';
-  installationYear: number;
-  condition: ConditionType;
-}
-
-export interface HeatingConfig {
-  types: string[];
-  installationYear: number;
-  condition: ConditionType;
-}
-
-export interface RoomElements {
+// Interface Room mise à jour
+export interface Room {
+  id: string;
+  type: string;
+  name: string;
+  floor: number;
+  windows: {
+    count: number;
+    type: 'simple' | 'double';
+    installationYear: number;
+    condition: ConditionType;
+  };
+  heating: {
+    types: string[];
+    installationYear: number;
+    condition: ConditionType;
+  };
+  ventilation: string[];
+  ventilationCondition: ConditionType;
+  humidity: number;
+  humidityCondition: ConditionType;
+  isolation: {
+    condition: ConditionType;
+  };
   charpente: {
     condition: ConditionType;
   };
@@ -76,22 +85,6 @@ export interface RoomElements {
   facades: {
     condition: ConditionType;
   };
-  isolation: {
-    condition: ConditionType;
-  };
-  ventilation: string[];
-  ventilationCondition: ConditionType;
-  humidity: number;
-  humidityCondition: ConditionType;
-}
-
-export interface Room extends RoomElements {
-  id: string;
-  type: string;
-  name: string;
-  floor: number;
-  windows: WindowsConfig;
-  heating: HeatingConfig;
 }
 
 export interface Expertise {
