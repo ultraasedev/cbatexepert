@@ -530,33 +530,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
   };
 
   const handleConditionUpdate = (index: number, field: string, condition: ConditionType): void => {
-    setFormData(prev => {
-      const newRooms = [...prev.details.rooms];
-      
-      if (field.includes('.')) {
-        const [mainField, subField] = field.split('.');
-        newRooms[index] = {
-          ...newRooms[index],
-          [mainField]: {
-            ...newRooms[index][mainField as keyof Room],
-            condition: condition
-          }
-        };
-      } else {
-        newRooms[index] = {
-          ...newRooms[index],
-          [`${field}Condition`]: condition
-        };
-      }
-  
-      return {
-        ...prev,
-        details: {
-          ...prev.details,
-          rooms: newRooms
-        }
-      };
-    });
+    if (field.includes('.')) {
+      const [mainField, subField] = field.split('.');
+      handleRoomUpdate(index, `${mainField}.condition`, condition);
+    } else {
+      handleRoomUpdate(index, `${field}Condition`, condition);
+    }
   };
 
   const fetchAddressSuggestions = async (input: string): Promise<void> => {
@@ -782,16 +761,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     mb = 6,
     fieldId
   }: StateSelectorProps) => {
-    // Options typées
-    const options: StateSelectorOption[] = [
-      { value: 'Bon', color: 'green' },
-      { value: 'Moyen', color: 'yellow' },
-      { value: 'Mauvais', color: 'red' }
-    ];
-  
-    const handleChange = (value: ConditionType) => {
-      onChange(value);
-    };
+    const inputGroupId = `${fieldId}-group`;
   
     return (
       <Box width="100%" mb={mb} p={4} borderWidth="1px" borderRadius="md">
@@ -803,30 +773,41 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             {description}
           </Text>
         )}
-        <FormControl id={`${fieldId}-control`}>
+        <FormControl>
           {label && (
-            <FormLabel htmlFor={fieldId}>{label}</FormLabel>
+            <FormLabel htmlFor={inputGroupId}>{label}</FormLabel>
           )}
-          <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} width="100%">
-            {options.map((option) => (
-              <Button
-                key={`${fieldId}-${option.value}`}
-                id={`${fieldId}-${option.value}`}
-                role="radio"
-                aria-checked={currentValue === option.value}
-                width="100%"
-                height="60px"
-                onClick={() => handleChange(option.value)}
-                colorScheme={option.color}
-                variant={currentValue === option.value ? "solid" : "outline"}
-                _hover={{ transform: 'none' }}
-                fontSize="lg"
-                aria-labelledby={`${fieldId}-label`}
-              >
-                {option.value}
-              </Button>
-            ))}
-          </Stack>
+          <RadioGroup 
+            id={inputGroupId} 
+            value={currentValue} 
+            onChange={onChange}
+          >
+            <Stack direction={{ base: 'column', sm: 'row' }} spacing={4}>
+              {CONDITION_TYPES.map((conditionType) => (
+                <Radio
+                  key={`${fieldId}-${conditionType}`}
+                  id={`${fieldId}-${conditionType}`}
+                  value={conditionType}
+                  name={fieldId}
+                  size="lg"
+                  colorScheme={
+                    conditionType === 'Bon' ? 'green' :
+                    conditionType === 'Moyen' ? 'yellow' : 'red'
+                  }
+                >
+                  <Box
+                    as="span"
+                    p={2}
+                    width="100%"
+                    textAlign="center"
+                    fontSize="lg"
+                  >
+                    {conditionType}
+                  </Box>
+                </Radio>
+              ))}
+            </Stack>
+          </RadioGroup>
         </FormControl>
       </Box>
     );
