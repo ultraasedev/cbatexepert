@@ -17,9 +17,26 @@ export interface Beneficiary {
   phone: string;
 }
 
+// Types de base
 export type ExpertiseStatus = 'En cours' | 'Terminé';
 export type ConditionType = 'Bon' | 'Moyen' | 'Mauvais';
 export type GlobalConditionType = 'Favorable' | 'Correct' | 'Critique';
+
+// Types pour les valeurs spécifiques
+export type HeatingType = 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
+export type VentilationType = 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
+export type IsolationType = 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
+export type IsolationPose = 'Sous rampants' | 'En soufflage' | 'En rouleau';
+
+// Interface pour le sélecteur d'état
+export interface StateSelectorProps {
+  label?: string;
+  currentValue: ConditionType;
+  onChange: (value: ConditionType) => void;
+  description?: string;
+  mb?: number | string;
+  fieldId: string;
+}
 
 // Interfaces pour les expertises
 export interface RoomEvaluation {
@@ -33,6 +50,48 @@ export interface GlobalEvaluation {
   score: number;
   condition: GlobalConditionType;
   comment: string;
+}
+
+// Interface pour les configurations des pièces
+export interface WindowsConfig {
+  count: number;
+  type: 'simple' | 'double';
+  installationYear: number;
+  condition: ConditionType;
+}
+
+export interface HeatingConfig {
+  types: string[];
+  installationYear: number;
+  condition: ConditionType;
+}
+
+export interface RoomElements {
+  charpente: {
+    condition: ConditionType;
+  };
+  toiture: {
+    condition: ConditionType;
+  };
+  facades: {
+    condition: ConditionType;
+  };
+  isolation: {
+    condition: ConditionType;
+  };
+  ventilation: string[];
+  ventilationCondition: ConditionType;
+  humidity: number;
+  humidityCondition: ConditionType;
+}
+
+export interface Room extends RoomElements {
+  id: string;
+  type: string;
+  name: string;
+  floor: number;
+  windows: WindowsConfig;
+  heating: HeatingConfig;
 }
 
 export interface Expertise {
@@ -55,7 +114,7 @@ export interface Expertise {
     anneeInstallation: number;
   };
   chauffage: {
-    type: 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
+    type: HeatingType;
     nombre: number;
     etat: ConditionType;
     anneeInstallation: number;
@@ -78,7 +137,7 @@ export interface Expertise {
     etat: ConditionType;
   };
   ventilation: {
-    type: 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
+    type: VentilationType;
     nombreBouches: number;
     piecesEquipees: string;
     ventilationNaturelle: boolean;
@@ -86,8 +145,8 @@ export interface Expertise {
     etat: ConditionType;
   };
   isolation: {
-    type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
-    pose: 'Sous rampants' | 'En soufflage' | 'En rouleau';
+    type: IsolationType;
+    pose: IsolationPose;
     epaisseur: number;
     etat: ConditionType;
     presenceCondensation: boolean;
@@ -156,10 +215,89 @@ export interface PDA {
 }
 
 // Types pour les formulaires
+export interface FormDataDetails {
+  beneficiary: {
+    firstName: string;
+    lastName: string;
+    address: string;
+    phone: string;
+  };
+  construction: {
+    year: number;
+    area: number;
+    floors: number;
+  };
+  rooms: Room[];
+  facades: Array<{
+    type: 'Enduit' | 'Peinture' | 'Pierre';
+    thickness: number;
+    lastMaintenance: string;
+    condition: ConditionType;
+  }>;
+  electrical: {
+    type: 'Mono' | 'Triphasé';
+    installationYear: number;
+    hasLinky: boolean;
+    upToStandards: boolean;
+    condition: ConditionType;
+  };
+  isolation: {
+    combles: {
+      type: IsolationType;
+      installation: IsolationPose;
+      thickness: number;
+      condition: ConditionType;
+      hasCondensation: boolean;
+      condensationLocations: string[];
+      humidityRate: number;
+    };
+    murs: {
+      type: IsolationType;
+      installation: IsolationPose;
+      thickness: number;
+      condition: ConditionType;
+    };
+    sols?: {
+      type: IsolationType;
+      installation: IsolationPose;
+      thickness: number;
+      condition: ConditionType;
+    };
+    condition: ConditionType;
+  };
+  framework: {
+    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
+    hasBeam: boolean;
+    hadMaintenance: boolean;
+    maintenanceDate: string | null;
+    condition: ConditionType;
+  };
+  roof: {
+    type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
+    ridgeType: 'Cimente' | 'En Boîte';
+    maintenanceDate: string;
+    maintenanceType: string;
+    hasImpurities: boolean;
+    installationYear: number;
+    condition: ConditionType;
+  };
+}
+
+export interface FormData {
+  typeLogement: 'appartement' | 'maison' | '';
+  details: FormDataDetails;
+  evaluations: {
+    rooms: {
+      [key: string]: RoomEvaluation;
+    };
+    global: GlobalEvaluation;
+  };
+}
+
 export interface ExpertiseFormProps {
   isEditing?: boolean;
   initialData?: Expertise | null;
-  onSubmit?: (formData: any) => Promise<void>;
+  onSubmit?: (formData: FormData) => Promise<void>;
 }
 
 export interface PDAFormProps {

@@ -94,7 +94,11 @@ interface IExpertise extends Document {
     };
     global: GlobalEvaluation;
   };
-  createdBy: string; // Changé pour correspondre au PDA
+  createdBy: {
+    toString(): string;
+    _id?: string;
+    id?: string;
+  }; // Changé pour correspondre au PDA
   status: 'En cours' | 'Terminé';
   createdAt: Date;
   updatedAt: Date;

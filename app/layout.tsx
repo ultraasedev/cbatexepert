@@ -17,8 +17,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr">
-      <body className={`${inter.className}`}>
+    <html lang="fr" suppressHydrationWarning={true}>
+      <head><link rel="icon" href="/favicon.ico" sizes="any" /></head>
+      <body className={inter.className} suppressHydrationWarning={true}>
         <Providers>
             {children}
         </Providers>

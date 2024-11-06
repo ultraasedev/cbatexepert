@@ -17,7 +17,7 @@ interface JWTPayload {
   role: string;
   name: string;
 }
-
+     
 interface RoomEvaluation {
   windows?: number;
   heating?: number;
@@ -32,7 +32,7 @@ interface GlobalEvaluation {
 }
 
 interface IExpertise {
-  _id: any;
+  _id: string;
   typeLogement: 'appartement' | 'maison';
   beneficiaire: {
     nom: string;
@@ -113,12 +113,25 @@ interface IExpertise {
     };
     global: GlobalEvaluation;
   };
-  createdBy: any;
+  createdBy: {
+    toString(): string;
+    _id?: string;
+    id?: string;
+  };
   status: 'En cours' | 'Terminé';
   createdAt: Date | string;
 }
 
-// Fonctions utilitaires
+interface RawData extends Omit<IExpertise, '_id' | 'createdBy' | 'createdAt'> {
+  _id: { toString(): string };
+  createdBy: { 
+    _id?: { toString(): string };
+    id?: string;
+    toString(): string;
+  };
+  createdAt: Date | string;
+}
+
 const authenticateToken = (request: NextRequest) => {
   try {
     const authHeader = request.headers.get('Authorization');
@@ -160,7 +173,6 @@ const calculateGlobalScore = (expertise: IExpertise): number => {
   const totalScore = elements.reduce((sum, etat) => sum + calculateScore(etat), 0);
   return totalScore / elements.length;
 };
-
 const generateRecommendations = (expertise: IExpertise): string => {
   const recommendations: string[] = [];
 
@@ -178,7 +190,9 @@ const generateRecommendations = (expertise: IExpertise): string => {
 
   if (expertise.isolation.etat === 'Mauvais' || expertise.isolation.etatCombles === 'Mauvais') {
     recommendations.push(`• L'isolation (${expertise.isolation.type}) nécessite une amélioration` +
-      (expertise.isolation.presenceCondensation ? `\n  - Présence de condensation dans les combles (${expertise.isolation.tauxHumiditeCombles}% d'humidité)` : ''));
+      (expertise.isolation.presenceCondensation 
+        ? `\n  - Présence de condensation dans les combles (${expertise.isolation.tauxHumiditeCombles}% d'humidité)` 
+        : ''));
   }
 
   if (expertise.ventilation.etat === 'Mauvais') {
@@ -194,6 +208,15 @@ const generateRecommendations = (expertise: IExpertise): string => {
       (expertise.toiture.presenceImpuretes ? '\n  - Présence d\'impuretés nécessitant un nettoyage' : ''));
   }
 
+  if (expertise.facade.etat === 'Mauvais') {
+    recommendations.push(`• La façade nécessite une rénovation (dernier entretien: ${expertise.facade.dernierEntretien})`);
+  }
+
+  if (expertise.charpente.etat === 'Mauvais') {
+    recommendations.push(`• La charpente nécessite une intervention` +
+      (!expertise.charpente.entretienEffectue ? '\n  - Aucun entretien effectué' : ''));
+  }
+
   if (recommendations.length === 0) {
     return "Aucun problème majeur n'a été détecté. Un entretien régulier est recommandé pour maintenir l'état actuel du bâtiment.";
   }
@@ -201,7 +224,6 @@ const generateRecommendations = (expertise: IExpertise): string => {
   return `Points nécessitant une attention particulière:\n\n${recommendations.join('\n\n')}`;
 };
 
-// Route principale
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     await connectDB();
@@ -223,9 +245,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         { status: 404 }
       );
     }
-    
 
-    const rawData = expertiseData.toObject() as Omit<IExpertise, '_id'> & { _id: { toString(): string } };
+    const rawData = expertiseData.toObject() as RawData;
     
     const expertise: IExpertise = {
       ...rawData,
@@ -233,8 +254,21 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       createdAt: rawData.createdAt instanceof Date 
         ? rawData.createdAt.toISOString() 
         : rawData.createdAt,
-      createdBy: rawData.createdBy?.toString() || rawData.createdBy
+      createdBy: {
+        toString: () => (rawData.createdBy?._id || rawData.createdBy?.id || rawData.createdBy).toString(),
+        _id: rawData.createdBy?._id?.toString(),
+        id: rawData.createdBy?.id?.toString()
+      }
     };
+
+    if (expertise.createdBy &&
+        expertise.createdBy.toString() !== user.id &&
+        user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, message: 'Non autorisé' },
+        { status: 403 }
+      );
+    }
 
     // Création du PDF
     const doc = new jsPDF();

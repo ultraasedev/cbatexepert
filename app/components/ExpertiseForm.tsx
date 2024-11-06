@@ -33,7 +33,6 @@ import {
   Divider,
   List,
   ListItem,
-  SimpleGrid
 } from '@chakra-ui/react';
 import { FaPlus, FaTrash, FaHome, FaBuilding } from 'react-icons/fa';
 import { useRouter } from 'next/navigation';
@@ -45,106 +44,18 @@ import type {
   RoomEvaluation, 
   GlobalEvaluation,
   ExpertiseFormProps,
-  ConditionType
+  ConditionType,
+  Room,
+  FormData,
+  HeatingType,
+  VentilationType,
+  IsolationType,
+  IsolationPose,
+  StateSelectorProps,
+  FormDataDetails
 } from '@/app/types';
-// Types et Interfaces
-interface IsolationDetails {
-  type: string;
-  installation: string;
-  thickness: number;
-  condition: ConditionType;
-}
 
-interface CombleIsolation extends IsolationDetails {
-  hasCondensation: boolean;
-  condensationLocations: string[];
-  humidityRate: number;
-}
-
-interface Room {
-  id: string;
-  type: string;
-  name: string;
-  floor: number;
-  windows: {
-    count: number;
-    type: 'simple' | 'double';
-    installationYear: number;
-    condition: ConditionType;
-  };
-  heating: {
-    types: string[];
-    installationYear: number;
-    condition: ConditionType;
-  };
-  ventilation: string[];
-  ventilationCondition: ConditionType;
-  humidity: number;
-  humidityCondition: ConditionType;
-  isolation: {
-    condition: ConditionType;
-  };
-}
-
-interface FormData {
-  typeLogement: 'maison' | 'appartement' | '';
-  details: {
-    beneficiary: {
-      firstName: string;
-      lastName: string;
-      address: string;
-      phone: string;
-    };
-    construction: {
-      year: number;
-      area: number;
-      floors: number;
-    };
-    rooms: Room[];
-    facades: Array<{
-      type: string;
-      thickness: number;
-      lastMaintenance: string;
-      condition: ConditionType;
-    }>;
-    electrical: {
-      type: 'Mono' | 'Triphasé';
-      installationYear: number;
-      hasLinky: boolean;
-      upToStandards: boolean;
-      condition: ConditionType;
-    };
-    isolation: {
-      combles: CombleIsolation;
-      murs: IsolationDetails;
-      sols?: IsolationDetails;
-      condition: ConditionType;
-    };
-    framework: {
-      type: string;
-      hasBeam: boolean;
-      hadMaintenance: boolean;
-      maintenanceDate: string | null;
-      condition: ConditionType;
-    };
-    roof: {
-      type: string;
-      ridgeType: string;
-      maintenanceDate: string;
-      maintenanceType: string;
-      hasImpurities: boolean;
-      installationYear: number;
-      condition: ConditionType;
-    };
-  };
-  evaluations: {
-    rooms: {
-      [key: string]: RoomEvaluation;
-    };
-    global: GlobalEvaluation;
-  };
-}
-// Constantes
+// Constantes typées
 const ROOM_TYPES = [
   'Entree',
   'Salon',
@@ -159,21 +70,21 @@ const ROOM_TYPES = [
   'Sous-sol'
 ] as const;
 
-const HEATING_TYPES = [
+const HEATING_TYPES: HeatingType[] = [
   'Électrique',
   'Gaz',
   'Fioul',
   'Bois',
   'Poêle',
   'Pac'
-] as const;
+];
 
-const VENTILATION_TYPES = [
+const VENTILATION_TYPES: VentilationType[] = [
   'VMC Simple flux',
   'Double Flux',
   'VMI',
   'VPH'
-] as const;
+];
 
 const FACADE_TYPES = [
   'Enduit',
@@ -181,18 +92,18 @@ const FACADE_TYPES = [
   'Pierre'
 ] as const;
 
-const TYPE_ISOLATION = [
+const TYPE_ISOLATION: IsolationType[] = [
   'Ouate de cellulose',
   'Laine de Roche',
   'Laine de Verre',
   'Isolation Minerales'
-] as const;
+];
 
-const TYPE_ISOLATION_POSE = [
+const TYPE_ISOLATION_POSE: IsolationPose[] = [
   'Sous rampants',
   'En soufflage',
   'En rouleau'
-] as const;
+];
 
 const TYPE_CHARPENTE = [
   'Fermette',
@@ -215,33 +126,22 @@ const TYPE_FAITAGE = [
 
 const CONDITION_TYPES: ConditionType[] = ['Bon', 'Moyen', 'Mauvais'];
 
-// Helper function
-const normalizeHeatingType = (type: string): string => {
-  const typeMap: { [key: string]: string } = {
-    'Électrique': 'Électrique',
-    'Gaz': 'Gaz',
-    'Fioul': 'Fioul',
-    'Bois': 'Bois',
-    'Poêle': 'Poêle',
-    'Pompe à chaleur': 'Pac'
-  };
-  return typeMap[type] || 'Électrique';
-};
-
-const defaultIsolation: IsolationDetails = {
-  type: '',
-  installation: '',
+// Valeurs par défaut typées
+const defaultIsolation = {
+  type: '' as IsolationType,
+  installation: '' as IsolationPose,
   thickness: 0,
-  condition: 'Moyen'
+  condition: 'Moyen' as ConditionType
 };
 
-const defaultCombleIsolation: CombleIsolation = {
+const defaultCombleIsolation = {
   ...defaultIsolation,
   hasCondensation: false,
-  condensationLocations: [],
+  condensationLocations: [] as string[],
   humidityRate: 0
 };
 
+// État initial du formulaire typé
 const initialFormData: FormData = {
   typeLogement: '',
   details: {
@@ -258,7 +158,7 @@ const initialFormData: FormData = {
     },
     rooms: [],
     facades: [{
-      type: '',
+      type: 'Enduit',
       thickness: 0,
       lastMaintenance: new Date().toISOString().split('T')[0],
       condition: 'Moyen'
@@ -276,15 +176,15 @@ const initialFormData: FormData = {
       condition: 'Moyen'
     },
     framework: {
-      type: '',
+      type: 'Fermette',
       hasBeam: false,
       hadMaintenance: false,
       maintenanceDate: null,
       condition: 'Moyen'
     },
     roof: {
-      type: '',
-      ridgeType: '',
+      type: 'Ardoise Naturelle',
+      ridgeType: 'Cimente',
       maintenanceDate: new Date().toISOString().split('T')[0],
       maintenanceType: '',
       hasImpurities: false,
@@ -301,10 +201,11 @@ const initialFormData: FormData = {
     }
   }
 };
+
+// Fonction de transformation des données initiales
 const transformInitialData = (data: Expertise): FormData => {
   const [firstName = '', lastName = ''] = data.beneficiaire.nom.split(' ');
 
-  // Transformer les évaluations
   const transformedEvaluations = {
     rooms: Object.entries(data.evaluations?.rooms || {}).reduce((acc, [roomId, evaluation]) => ({
       ...acc,
@@ -388,28 +289,39 @@ const transformInitialData = (data: Expertise): FormData => {
     evaluations: transformedEvaluations
   };
 };
-
 const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
   isEditing = false,
   initialData,
   onSubmit
-}) => {
-  // États
-  const [currentStep, setCurrentStep] = useState(1);
+}): React.ReactElement => {
+
+  //verif de l'auth
+  const { user, loading: authLoading, getAuthHeaders } = useAuth();
+  // États typés
+  const [currentStep, setCurrentStep] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>(initialFormData);
-  const [loading, setLoading] = useState(false);
-  const [evaluationScore, setEvaluationScore] = useState(0);
-  const [addressSuggestions, setAddressSuggestions] = useState<Array<{label: string; context: string}>>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [evaluationScore, setEvaluationScore] = useState<number>(0);
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+    label: string;
+    context: string;
+  }>>([]);
 
   // Hooks
   const router = useRouter();
-  const { user } = useAuth();
   const toast = useToast();
   const isMobile = useBreakpointValue({ base: true, md: false });
   const highlightBg = useColorModeValue('blue.100', 'blue.700');
   const normalBg = useColorModeValue('gray.100', 'gray.700');
 
   // Effects
+  // Vérification de l'authentification
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
   useEffect(() => {
     if (isEditing && initialData) {
       const transformedData = transformInitialData(initialData);
@@ -422,13 +334,9 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
       calculateNewScore();
     }
   }, [currentStep, formData.details.rooms]);
-  useEffect(() => {
-    if (currentStep === 14) {
-      calculateNewScore();
-    }
-  }, [currentStep, formData.details.rooms]);
 
-  const handleInputChange = (path: string, value: any) => {
+  // Gestionnaires d'événements typés
+  const handleInputChange = (path: string, value: unknown): void => {
     setFormData(prev => {
       const newData = { ...prev };
       const keys = path.split('.');
@@ -444,11 +352,11 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     });
   };
 
-  const handleTypeLogementSelect = (type: 'maison' | 'appartement') => {
+  const handleTypeLogementSelect = (type: 'maison' | 'appartement'): void => {
     handleInputChange('typeLogement', type);
   };
 
-  const handleRoomUpdate = (index: number, field: string, value: any) => {
+  const handleRoomUpdate = (index: number, field: string, value: unknown): void => {
     setFormData(prev => {
       const newRooms = [...prev.details.rooms];
       if (field.includes('.')) {
@@ -467,7 +375,6 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         };
       }
   
-      // Gérer l'ajout/suppression de sous-sol et l'isolation des sols
       let newFormData = {
         ...prev,
         details: {
@@ -476,9 +383,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         }
       };
   
-      if (field === 'type') {
+      if (field === 'type' && typeof value === 'string') {
         if (value === 'Sous-sol') {
-          // Ajouter l'isolation des sols si on ajoute un sous-sol
           newFormData = {
             ...newFormData,
             details: {
@@ -490,10 +396,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             }
           };
         } else {
-          // Vérifier s'il reste d'autres sous-sols
           const stillHasBasement = newRooms.some((r, i) => i !== index && r.type === 'Sous-sol');
           if (!stillHasBasement) {
-            // Supprimer l'isolation des sols s'il n'y a plus de sous-sol
             newFormData = {
               ...newFormData,
               details: {
@@ -512,7 +416,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     });
   };
 
-  const addRoom = () => {
+  const addRoom = (): void => {
     setFormData(prev => ({
       ...prev,
       details: {
@@ -541,6 +445,15 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             humidityCondition: 'Moyen',
             isolation: {
               condition: 'Moyen'
+            },
+            charpente: {
+              condition: 'Moyen'
+            },
+            toiture: {
+              condition: 'Moyen'
+            },
+            facades: {
+              condition: 'Moyen'
             }
           }
         ]
@@ -548,13 +461,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     }));
   };
 
-  const removeRoom = (index: number) => {
+  const removeRoom = (index: number): void => {
     setFormData(prev => {
       const newRooms = prev.details.rooms.filter((_, i) => i !== index);
       const hasBasement = newRooms.some(room => room.type === 'Sous-sol');
       
       if (!hasBasement) {
-        // Si plus de sous-sol, on retire l'isolation des sols
         return {
           ...prev,
           details: {
@@ -578,15 +490,15 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     });
   };
 
-  const handleWindowsUpdate = (index: number, field: string, value: any) => {
+  const handleWindowsUpdate = (index: number, field: string, value: unknown): void => {
     handleRoomUpdate(index, `windows.${field}`, value);
   };
 
-  const handleHeatingUpdate = (index: number, field: string, value: any) => {
+  const handleHeatingUpdate = (index: number, field: string, value: unknown): void => {
     handleRoomUpdate(index, `heating.${field}`, value);
   };
 
-  const handleVentilationUpdate = (index: number, ventilationType: string, isChecked: boolean) => {
+  const handleVentilationUpdate = (index: number, ventilationType: string, isChecked: boolean): void => {
     setFormData(prev => {
       const newRooms = [...prev.details.rooms];
       const currentVentilation = [...newRooms[index].ventilation];
@@ -617,20 +529,43 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     });
   };
 
-  const handleConditionUpdate = (index: number, field: string, condition: ConditionType) => {
-    if (field.includes('.')) {
-      const [mainField, subField] = field.split('.');
-      handleRoomUpdate(index, `${mainField}.condition`, condition);
-    } else {
-      handleRoomUpdate(index, `${field}Condition`, condition);
-    }
+  const handleConditionUpdate = (index: number, field: string, condition: ConditionType): void => {
+    setFormData(prev => {
+      const newRooms = [...prev.details.rooms];
+      
+      if (field.includes('.')) {
+        const [mainField, subField] = field.split('.');
+        newRooms[index] = {
+          ...newRooms[index],
+          [mainField]: {
+            ...newRooms[index][mainField as keyof Room],
+            condition: condition
+          }
+        };
+      } else {
+        newRooms[index] = {
+          ...newRooms[index],
+          [`${field}Condition`]: condition
+        };
+      }
+  
+      return {
+        ...prev,
+        details: {
+          ...prev.details,
+          rooms: newRooms
+        }
+      };
+    });
   };
 
-  const fetchAddressSuggestions = async (input: string) => {
+  const fetchAddressSuggestions = async (input: string): Promise<void> => {
     if (input.length > 2) {
       try {
+        const headers = getAuthHeaders();
         const response = await fetch(
-          `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(input)}&limit=5`
+          `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(input)}&limit=5`,
+          { headers }
         );
         const data = await response.json();
         setAddressSuggestions(
@@ -640,7 +575,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           }))
         );
       } catch (error) {
-        console.error('Erreur lors de la récupération des suggestions d\'adresse:', error);
+        console.error('Erreur:', error);
         setAddressSuggestions([]);
       }
     } else {
@@ -648,13 +583,23 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     }
   };
 
-  const handleIsolationUpdate = (area: 'combles' | 'murs' | 'sols', field: string, value: any) => {
+  const handleIsolationUpdate = (area: 'combles' | 'murs' | 'sols', field: string, value: unknown): void => {
     handleInputChange(`details.isolation.${area}.${field}`, value);
   };
 
-  const calculateNewScore = () => {
+  // Fonction de calcul du score
+  const calculateScoreFromCondition = (condition: ConditionType): number => {
+    switch (condition) {
+      case 'Bon': return 5;
+      case 'Moyen': return 3;
+      case 'Mauvais': return 1;
+      default: return 3;
+    }
+  };
+
+  const calculateNewScore = (): void => {
     const roomScores = formData.details.rooms.map(room => {
-      const scores = [];
+      const scores: number[] = [];
       if (room.windows.count > 0) {
         scores.push(calculateScoreFromCondition(room.windows.condition));
       }
@@ -687,22 +632,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
 
     const condition = newScore >= 4 ? 'Favorable' : 
                      newScore >= 2.5 ? 'Correct' : 'Critique';
-    const comment = generateGlobalComment(newScore);
-    
+                     
     handleInputChange('evaluations.global', {
       score: newScore,
       condition,
-      comment
+      comment: generateGlobalComment(newScore)
     });
-  };
-
-  const calculateScoreFromCondition = (condition: ConditionType): number => {
-    switch (condition) {
-      case 'Bon': return 5;
-      case 'Moyen': return 3;
-      case 'Mauvais': return 1;
-      default: return 3;
-    }
   };
 
   const generateGlobalComment = (score: number): string => {
@@ -714,7 +649,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
       return "L'état général du bâtiment nécessite des travaux de rénovation importants. Une intervention est recommandée pour améliorer le confort et l'efficacité énergétique.";
     }
   };
-  const validateExpertiseData = (formData: FormData) => {
+  const validateExpertiseData = (formData: FormData): { isValid: boolean; errors: string[] } => {
     const errors: string[] = [];
 
     if (!formData.typeLogement) errors.push('Le type de logement est requis');
@@ -751,9 +686,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     };
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
     e.preventDefault();
-    setLoading(true);
+    if (!user) {
+      router.push('/login');
+      return;
+    }
 
     try {
       calculateNewScore();
@@ -763,118 +701,53 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         throw new Error(`Validation échouée: ${validation.errors.join(', ')}`);
       }
 
-      // Préparation des données pour l'envoi
-      const dataToSend = {
+       // Construction de dataToSend avec la structure correcte
+       const dataToSend: FormData = {
         typeLogement: formData.typeLogement,
-        beneficiaire: {
-          nom: `${formData.details.beneficiary.firstName.trim()} ${formData.details.beneficiary.lastName.trim()}`.trim(),
-          adresse: formData.details.beneficiary.address.trim(),
-          telephone: formData.details.beneficiary.phone.trim()
-        },
         details: {
-          anneeConstruction: Number(formData.details.construction.year),
-          superficie: Number(formData.details.construction.area),
-          nombreEtages: Number(formData.details.construction.floors)
-        },
-        ouvertures: {
-          nombre: formData.details.rooms.reduce((acc, room) => acc + (Number(room.windows.count) || 0), 0),
-          typeVitrage: formData.details.rooms[0]?.windows.type || 'simple',
-          etat: formData.details.rooms[0]?.windows.condition || "Bon",
-          anneeInstallation: Number(formData.details.rooms[0]?.windows.installationYear) || new Date().getFullYear()
-        },
-        chauffage: {
-          type: normalizeHeatingType(formData.details.rooms[0]?.heating.types[0] || 'Électrique'),
-          nombre: 1,
-          etat: formData.details.electrical.condition || 'Bon',
-          anneeInstallation: Number(formData.details.rooms[0]?.heating.installationYear) || new Date().getFullYear()
-        },
-        humidite: {
-          taux: Number(formData.details.rooms.reduce((acc, room) => acc + (room.humidity || 0), 0) / 
-                Math.max(formData.details.rooms.length, 1)) || 0,
-          etat: formData.details.rooms[0]?.humidityCondition || 'Bon'
-        },
-        facade: {
-          type: formData.details.facades[0]?.type || '',
-          epaisseurMurs: Number(formData.details.facades[0]?.thickness) || 0,
-          dernierEntretien: Number(new Date(formData.details.facades[0]?.lastMaintenance || new Date()).getFullYear()),
-          etat: formData.details.facades[0]?.condition || 'Moyen'
-        },
-        tableauElectrique: {
-          type: formData.details.electrical.type || 'Mono',
-          anneePose: Number(formData.details.electrical.installationYear) || new Date().getFullYear(),
-          presenceLinky: Boolean(formData.details.electrical.hasLinky),
-          auxNormes: Boolean(formData.details.electrical.upToStandards),
-          etat: formData.details.electrical.condition || 'Moyen'
-        },
-        ventilation: {
-          type: formData.details.rooms[0]?.ventilation[0] || 'VMC Simple flux',
-          nombreBouches: 1,
-          piecesEquipees: formData.details.rooms[0]?.type || '',
-          ventilationNaturelle: false,
-          anneePose: new Date().getFullYear(),
-          etat: formData.details.rooms[0]?.ventilationCondition || 'Bon'
-        },
-        isolation: {
-          combles: {
-            type: formData.details.isolation.combles.type,
-            installation: formData.details.isolation.combles.installation,
-            thickness: formData.details.isolation.combles.thickness,
-            condition: formData.details.isolation.combles.condition,
-            hasCondensation: formData.details.isolation.combles.hasCondensation,
-            condensationLocations: formData.details.isolation.combles.condensationLocations,
-            humidityRate: formData.details.isolation.combles.humidityRate
+          beneficiary: formData.details.beneficiary,
+          construction: {
+            year: Number(formData.details.construction.year),
+            area: Number(formData.details.construction.area),
+            floors: Number(formData.details.construction.floors)
           },
-          murs: {
-            type: formData.details.isolation.murs.type,
-            installation: formData.details.isolation.murs.installation,
-            thickness: formData.details.isolation.murs.thickness,
-            condition: formData.details.isolation.murs.condition
+          rooms: formData.details.rooms,
+          facades: formData.details.facades,
+          electrical: formData.details.electrical,
+          isolation: {
+            combles: {
+              type: formData.details.isolation.combles.type,
+              installation: formData.details.isolation.combles.installation,
+              thickness: formData.details.isolation.combles.thickness,
+              condition: formData.details.isolation.combles.condition,
+              hasCondensation: formData.details.isolation.combles.hasCondensation,
+              condensationLocations: formData.details.isolation.combles.condensationLocations,
+              humidityRate: formData.details.isolation.combles.humidityRate
+            },
+            murs: {
+              type: formData.details.isolation.murs.type,
+              installation: formData.details.isolation.murs.installation,
+              thickness: formData.details.isolation.murs.thickness,
+              condition: formData.details.isolation.murs.condition
+            },
+            sols: formData.details.isolation.sols,
+            condition: formData.details.isolation.condition
           },
-          ...(formData.details.isolation.sols && {
-            sols: {
-              type: formData.details.isolation.sols.type,
-              installation: formData.details.isolation.sols.installation,
-              thickness: formData.details.isolation.sols.thickness,
-              condition: formData.details.isolation.sols.condition
-            }
-          })
+          framework: formData.details.framework,
+          roof: formData.details.roof
         },
-        charpente: {
-          type: formData.details.framework.type || '',
-          presenceArtive: Boolean(formData.details.framework.hasBeam),
-          entretienEffectue: Boolean(formData.details.framework.hadMaintenance),
-          dateEntretien: formData.details.framework.maintenanceDate ? 
-            new Date(formData.details.framework.maintenanceDate) :
-            new Date(),
-          etat: formData.details.framework.condition || 'Moyen'
-        },
-        toiture: {
-          type: formData.details.roof.type || '',
-          typeFaitage: formData.details.roof.ridgeType || '',
-          dateEntretien: new Date(formData.details.roof.maintenanceDate || new Date()),
-          typeEntretien: formData.details.roof.maintenanceType || '',
-          presenceImpuretes: Boolean(formData.details.roof.hasImpurities),
-          annee: Number(formData.details.roof.installationYear) || new Date().getFullYear(),
-          etat: formData.details.roof.condition || 'Moyen'
-        },
-        evaluations: formData.evaluations
+        evaluations: {
+          rooms: formData.evaluations.rooms,
+          global: {
+            score: evaluationScore,
+            condition: formData.evaluations.global.condition,
+            comment: formData.evaluations.global.comment
+          }
+        }
       };
 
-      const url = isEditing ? `/api/expertises/${initialData?._id}` : '/api/expertises';
-      const method = isEditing ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(dataToSend)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la sauvegarde');
+      if (onSubmit) {
+        await onSubmit(dataToSend);
       }
 
       toast({
@@ -900,7 +773,227 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     }
   };
 
+  // Composant StateSelector avec props typées
+  const StateSelector: React.FC<StateSelectorProps> = ({ 
+    label = "",
+    currentValue,
+    onChange,
+    description = "",
+    mb = 6,
+    fieldId
+  }: StateSelectorProps) => {
+    // Options typées
+    const options: StateSelectorOption[] = [
+      { value: 'Bon', color: 'green' },
+      { value: 'Moyen', color: 'yellow' },
+      { value: 'Mauvais', color: 'red' }
+    ];
+  
+    const handleChange = (value: ConditionType) => {
+      onChange(value);
+    };
+  
+    return (
+      <Box width="100%" mb={mb} p={4} borderWidth="1px" borderRadius="md">
+        {label && (
+          <Text fontWeight="bold" fontSize="lg" mb={2}>{label}</Text>
+        )}
+        {description && (
+          <Text fontSize="sm" color="gray.600" mb={4}>
+            {description}
+          </Text>
+        )}
+        <FormControl id={`${fieldId}-control`}>
+          {label && (
+            <FormLabel htmlFor={fieldId}>{label}</FormLabel>
+          )}
+          <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} width="100%">
+            {options.map((option) => (
+              <Button
+                key={`${fieldId}-${option.value}`}
+                id={`${fieldId}-${option.value}`}
+                role="radio"
+                aria-checked={currentValue === option.value}
+                width="100%"
+                height="60px"
+                onClick={() => handleChange(option.value)}
+                colorScheme={option.color}
+                variant={currentValue === option.value ? "solid" : "outline"}
+                _hover={{ transform: 'none' }}
+                fontSize="lg"
+                aria-labelledby={`${fieldId}-label`}
+              >
+                {option.value}
+              </Button>
+            ))}
+          </Stack>
+        </FormControl>
+      </Box>
+    );
+  };
+  // Interface pour les composants réutilisables
+  interface RoomConditionsProps {
+    room: Room;
+    index: number;
+    onUpdate: {
+      handleConditionUpdate: (index: number, field: string, condition: ConditionType) => void;
+      handleRoomUpdate: (index: number, field: string, value: unknown) => void;
+    };
+  }
+  interface StateSelectorOption {
+    value: ConditionType;
+    color: 'green' | 'yellow' | 'red';
+  }
+
+  // Composant pour les conditions des pièces
+  const RoomConditions: React.FC<RoomConditionsProps> = ({ 
+    room, 
+    index, 
+    onUpdate: { handleConditionUpdate, handleRoomUpdate }
+  }) => (
+    <VStack spacing={6} align="stretch" width="100%">
+      {room.windows.count > 0 && (
+        <StateSelector
+          label="État des ouvertures"
+          description={`${room.windows.count} ${room.windows.count > 1 ? 'ouvertures' : 'ouverture'} - 
+            ${room.windows.type === 'simple' ? 'Simple vitrage' : 'Double vitrage'} (${room.windows.installationYear})`}
+          currentValue={room.windows.condition}
+          onChange={(value) => handleConditionUpdate(index, "windows", value)}
+          fieldId={`${room.id}-windows-condition`}
+        />
+      )}
+
+      {room.heating.types.length > 0 && (
+        <StateSelector
+          label="État du chauffage"
+          description={`Types installés: ${room.heating.types.join(', ')}`}
+          currentValue={room.heating.condition}
+          onChange={(value) => handleConditionUpdate(index, "heating", value)}
+          fieldId={`${room.id}-heating-condition`}
+        />
+      )}
+
+      <Box p={4} borderWidth="1px" borderRadius="md">
+        <Text fontWeight="bold" fontSize="lg" mb={4}>Humidité</Text>
+        <FormControl mb={4}>
+          <FormLabel htmlFor={`${room.id}-humidity-rate`}>
+            Taux d'humidité (%)
+          </FormLabel>
+          <NumberInput
+            id={`${room.id}-humidity-rate`}
+            name={`${room.id}-humidity-rate`}
+            value={room.humidity}
+            min={0}
+            max={100}
+            onChange={(valueString) => handleRoomUpdate(index, "humidity", parseInt(valueString))}
+          >
+            <NumberInputField height="50px" fontSize="lg" />
+          </NumberInput>
+        </FormControl>
+        
+        <StateSelector
+          currentValue={room.humidityCondition}
+          onChange={(value) => handleConditionUpdate(index, "humidity", value)}
+          fieldId={`${room.id}-humidity-condition`}
+          mb={0}
+        />
+      </Box>
+
+      <StateSelector
+        label="État de la ventilation"
+        description={room.ventilation.length > 0 ? 
+          `Types installés: ${room.ventilation.join(', ')}` : 
+          'Aucune ventilation'}
+        currentValue={room.ventilationCondition}
+        onChange={(value) => handleConditionUpdate(index, "ventilation", value)}
+        fieldId={`${room.id}-ventilation-condition`}
+      />
+
+      <StateSelector
+        label="État de l'isolation"
+        currentValue={room.isolation.condition}
+        onChange={(value) => handleConditionUpdate(index, "isolation", value)}
+        fieldId={`${room.id}-isolation-condition`}
+      />
+
+      <StateSelector
+        label="État de la charpente"
+        currentValue={room.charpente.condition}
+        onChange={(value) => handleConditionUpdate(index, "charpente", value)}
+        fieldId={`${room.id}-charpente-condition`}
+      />
+
+      <StateSelector
+        label="État de la toiture"
+        currentValue={room.toiture.condition}
+        onChange={(value) => handleConditionUpdate(index, "toiture", value)}
+        fieldId={`${room.id}-toiture-condition`}
+      />
+
+      <StateSelector
+        label="État des façades"
+        currentValue={room.facades.condition}
+        onChange={(value) => handleConditionUpdate(index, "facades", value)}
+        fieldId={`${room.id}-facades-condition`}
+      />
+    </VStack>
+  );
   const renderStep = () => {
+  // Fonction utilitaire pour générer des IDs uniques
+  const generateFieldId = (
+    type: string, 
+    element: string, 
+    subElement: string = ''
+  ): string => {
+    const cleanType = type.toLowerCase().replace(/\s+/g, '-');
+    const cleanElement = element.toLowerCase().replace(/\s+/g, '-');
+    return `${cleanType}-${cleanElement}${subElement ? `-${subElement}` : ''}`;
+  };
+  
+    // Composant StateSelector réutilisable
+   // Dans renderStep
+const StateSelector: React.FC<StateSelectorProps> = ({ 
+  label = "", // Valeur par défaut avec type string
+  currentValue,
+  onChange,
+  description = "",
+  mb = 6,
+  fieldId
+}: StateSelectorProps) => (
+  <Box width="100%" mb={mb} p={4} borderWidth="1px" borderRadius="md">
+    {label && (
+      <Text fontWeight="bold" fontSize="lg" mb={2}>{label}</Text>
+    )}
+    {description && (
+      <Text fontSize="sm" color="gray.600" mb={4}>
+        {description}
+      </Text>
+    )}
+    <Stack direction={{ base: 'column', sm: 'row' }} spacing={4} width="100%">
+      {[
+        { value: 'Bon' as ConditionType, color: 'green' },
+        { value: 'Moyen' as ConditionType, color: 'yellow' },
+        { value: 'Mauvais' as ConditionType, color: 'red' }
+      ].map((option) => (
+        <Button
+          key={`${fieldId}-${option.value}`}
+          id={`${fieldId}-${option.value}`}
+          name={fieldId}
+          width="100%"
+          height="60px"
+          onClick={() => onChange(option.value)}
+          colorScheme={option.color}
+          variant={currentValue === option.value ? "solid" : "outline"}
+          _hover={{ transform: 'none' }}
+          fontSize="lg"
+        >
+          {option.value}
+        </Button>
+      ))}
+    </Stack>
+  </Box>
+);
+  
     switch (currentStep) {
       case 1:
         return (
@@ -916,6 +1009,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 onClick={() => handleTypeLogementSelect("maison")}
                 _hover={{ transform: "scale(1.02)", borderColor: "blue.500" }}
                 transition="all 0.2s"
+                id="type-logement-maison"
               >
                 <VStack spacing={4}>
                   <Icon
@@ -939,6 +1033,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 onClick={() => handleTypeLogementSelect("appartement")}
                 _hover={{ transform: "scale(1.02)", borderColor: "blue.500" }}
                 transition="all 0.2s"
+                id="type-logement-appartement"
               >
                 <VStack spacing={4}>
                   <Icon
@@ -959,50 +1054,39 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
       case 2:
         return (
           <VStack spacing={6}>
-            <Grid
-              templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
-              gap={6}
-              width="100%"
-            >
+            <Grid templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"} gap={6} width="100%">
               <FormControl isRequired>
-                <FormLabel>Prénom</FormLabel>
+                <FormLabel htmlFor="beneficiary-firstname">Prénom</FormLabel>
                 <Input
+                  id="beneficiary-firstname"
+                  name="beneficiary-firstname"
                   value={formData.details.beneficiary.firstName}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.beneficiary.firstName",
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => handleInputChange("details.beneficiary.firstName", e.target.value)}
                   placeholder="Prénom du bénéficiaire"
                 />
               </FormControl>
   
               <FormControl isRequired>
-                <FormLabel>Nom</FormLabel>
+                <FormLabel htmlFor="beneficiary-lastname">Nom</FormLabel>
                 <Input
+                  id="beneficiary-lastname"
+                  name="beneficiary-lastname"
                   value={formData.details.beneficiary.lastName}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.beneficiary.lastName",
-                      e.target.value
-                    )
-                  }
+                  onChange={(e) => handleInputChange("details.beneficiary.lastName", e.target.value)}
                   placeholder="Nom du bénéficiaire"
                 />
               </FormControl>
             </Grid>
   
             <FormControl isRequired>
-              <FormLabel>Adresse</FormLabel>
+              <FormLabel htmlFor="beneficiary-address">Adresse</FormLabel>
               <Box position="relative">
                 <Input
+                  id="beneficiary-address"
+                  name="beneficiary-address"
                   value={formData.details.beneficiary.address}
                   onChange={(e) => {
-                    handleInputChange(
-                      "details.beneficiary.address",
-                      e.target.value
-                    );
+                    handleInputChange("details.beneficiary.address", e.target.value);
                     fetchAddressSuggestions(e.target.value);
                   }}
                   placeholder="Entrez une adresse"
@@ -1027,10 +1111,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                         _hover={{ bg: "gray.100" }}
                         cursor="pointer"
                         onClick={() => {
-                          handleInputChange(
-                            "details.beneficiary.address",
-                            suggestion.label
-                          );
+                          handleInputChange("details.beneficiary.address", suggestion.label);
                           setAddressSuggestions([]);
                         }}
                       >
@@ -1043,14 +1124,16 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             </FormControl>
   
             <FormControl isRequired>
-              <FormLabel>Téléphone</FormLabel>
+              <FormLabel htmlFor="beneficiary-phone">Téléphone</FormLabel>
               <Box position="relative">
                 <PhoneInput
                   country={"fr"}
                   value={formData.details.beneficiary.phone}
-                  onChange={(phone) =>
-                    handleInputChange("details.beneficiary.phone", phone)
-                  }
+                  onChange={(phone) => handleInputChange("details.beneficiary.phone", phone)}
+                  inputProps={{
+                    id: "beneficiary-phone",
+                    name: "beneficiary-phone"
+                  }}
                   inputStyle={{ width: "100%", height: "40px" }}
                   buttonStyle={{ borderRadius: "0.375rem 0 0 0.375rem" }}
                   dropdownStyle={{ width: "300px" }}
@@ -1071,64 +1154,65 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             </FormControl>
           </VStack>
         );
-        case 3:
-      return (
-        <VStack spacing={6}>
-          <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={6}>
-            <FormControl isRequired>
-              <FormLabel>Année de construction</FormLabel>
-              <NumberInput
-                min={1800}
-                max={new Date().getFullYear()}
-                value={formData.details.construction.year}
-                onChange={(valueString) =>
-                  handleInputChange(
+  
+      case 3:
+        return (
+          <VStack spacing={6}>
+            <Grid templateColumns={isMobile ? "1fr" : "repeat(3, 1fr)"} gap={6}>
+              <FormControl isRequired>
+                <FormLabel htmlFor="construction-year">Année de construction</FormLabel>
+                <NumberInput
+                  id="construction-year"
+                  name="construction-year"
+                  min={1800}
+                  max={new Date().getFullYear()}
+                  value={formData.details.construction.year}
+                  onChange={(valueString) => handleInputChange(
                     "details.construction.year",
                     parseInt(valueString)
-                  )
-                }
-              >
-                <NumberInputField />
-              </NumberInput>
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Superficie (m²)</FormLabel>
-              <NumberInput
-                min={1}
-                value={formData.details.construction.area}
-                onChange={(valueString) =>
-                  handleInputChange(
+                  )}
+                >
+                  <NumberInputField />
+                </NumberInput>
+              </FormControl>
+  
+              <FormControl isRequired>
+                <FormLabel htmlFor="construction-area">Superficie (m²)</FormLabel>
+                <NumberInput
+                  id="construction-area"
+                  name="construction-area"
+                  min={1}
+                  value={formData.details.construction.area}
+                  onChange={(valueString) => handleInputChange(
                     "details.construction.area",
                     parseInt(valueString)
-                  )
-                }
-              >
-                <NumberInputField />
-              </NumberInput>
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Nombre d'étages</FormLabel>
-              <NumberInput
-                min={0}
-                max={10}
-                value={formData.details.construction.floors}
-                onChange={(valueString) =>
-                  handleInputChange(
+                  )}
+                >
+                  <NumberInputField />
+                </NumberInput>
+              </FormControl>
+  
+              <FormControl isRequired>
+                <FormLabel htmlFor="construction-floors">Nombre d'étages</FormLabel>
+                <NumberInput
+                  id="construction-floors"
+                  name="construction-floors"
+                  min={0}
+                  max={10}
+                  value={formData.details.construction.floors}
+                  onChange={(valueString) => handleInputChange(
                     "details.construction.floors",
                     parseInt(valueString)
-                  )
-                }
-              >
-                <NumberInputField />
-              </NumberInput>
-            </FormControl>
-          </Grid>
-        </VStack>
-      );
+                  )}
+                >
+                  <NumberInputField />
+                </NumberInput>
+              </FormControl>
+            </Grid>
+          </VStack>
+        );
 
-    case 4:
+  case 4:
       return (
         <VStack spacing={6}>
           <Flex justify="space-between" align="center" width="100%">
@@ -1153,44 +1237,42 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                     alignItems="end"
                   >
                     <FormControl isRequired>
-                      <FormLabel>Type de pièce</FormLabel>
+                      <FormLabel htmlFor={`room-type-${index}`}>Type de pièce</FormLabel>
                       <Select
+                        id={`room-type-${index}`}
+                        name={`room-type-${index}`}
                         value={room.type}
-                        onChange={(e) =>
-                          handleRoomUpdate(index, "type", e.target.value)
-                        }
+                        onChange={(e) => handleRoomUpdate(index, "type", e.target.value)}
                       >
                         <option value="">Sélectionnez un type</option>
                         {ROOM_TYPES.map((type) => (
-                          <option key={type} value={type}>
-                            {type}
-                          </option>
+                          <option key={type} value={type}>{type}</option>
                         ))}
                       </Select>
                     </FormControl>
 
                     {room.type && (
                       <FormControl isRequired>
-                        <FormLabel>Nom de la pièce</FormLabel>
+                        <FormLabel htmlFor={`room-name-${index}`}>Nom de la pièce</FormLabel>
                         <Input
+                          id={`room-name-${index}`}
+                          name={`room-name-${index}`}
                           placeholder={`${room.type} ${index + 1}`}
                           value={room.name}
-                          onChange={(e) =>
-                            handleRoomUpdate(index, "name", e.target.value)
-                          }
+                          onChange={(e) => handleRoomUpdate(index, "name", e.target.value)}
                         />
                       </FormControl>
                     )}
 
                     <FormControl>
-                      <FormLabel>Étage</FormLabel>
+                      <FormLabel htmlFor={`room-floor-${index}`}>Étage</FormLabel>
                       <NumberInput
+                        id={`room-floor-${index}`}
+                        name={`room-floor-${index}`}
                         min={0}
                         max={formData.details.construction.floors}
                         value={room.floor}
-                        onChange={(value) =>
-                          handleRoomUpdate(index, "floor", parseInt(value))
-                        }
+                        onChange={(value) => handleRoomUpdate(index, "floor", parseInt(value))}
                       >
                         <NumberInputField />
                       </NumberInput>
@@ -1216,7 +1298,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           )}
         </VStack>
       );
-      case 5:
+
+    case 5:
       return (
         <VStack spacing={6}>
           <Heading size="md">Configuration des ouvertures par pièce</Heading>
@@ -1231,13 +1314,15 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
               <CardBody>
                 <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel>Nombre d'ouvertures</FormLabel>
+                    <FormLabel htmlFor={`windows-count-${room.id}`}>
+                      Nombre d'ouvertures
+                    </FormLabel>
                     <NumberInput
+                      id={`windows-count-${room.id}`}
+                      name={`windows-count-${room.id}`}
                       min={0}
                       value={room.windows.count}
-                      onChange={(value) =>
-                        handleWindowsUpdate(index, "count", parseInt(value))
-                      }
+                      onChange={(value) => handleWindowsUpdate(index, "count", parseInt(value))}
                     >
                       <NumberInputField />
                     </NumberInput>
@@ -1246,33 +1331,46 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                   {room.windows.count > 0 && (
                     <>
                       <FormControl>
-                        <FormLabel>Type de vitrage</FormLabel>
+                        <FormLabel htmlFor={`windows-type-${room.id}`}>Type de vitrage</FormLabel>
                         <RadioGroup
+                          id={`windows-type-${room.id}`}
                           value={room.windows.type}
-                          onChange={(value) =>
-                            handleWindowsUpdate(index, "type", value)
-                          }
+                          onChange={(value) => handleWindowsUpdate(index, "type", value)}
                         >
                           <Stack direction="row">
-                            <Radio value="simple">Simple vitrage</Radio>
-                            <Radio value="double">Double vitrage</Radio>
+                            <Radio 
+                              id={`windows-type-simple-${room.id}`} 
+                              name={`windows-type-${room.id}`} 
+                              value="simple"
+                            >
+                              Simple vitrage
+                            </Radio>
+                            <Radio 
+                              id={`windows-type-double-${room.id}`} 
+                              name={`windows-type-${room.id}`} 
+                              value="double"
+                            >
+                              Double vitrage
+                            </Radio>
                           </Stack>
                         </RadioGroup>
                       </FormControl>
 
                       <FormControl>
-                        <FormLabel>Année d'installation</FormLabel>
+                        <FormLabel htmlFor={`windows-year-${room.id}`}>
+                          Année d'installation
+                        </FormLabel>
                         <NumberInput
+                          id={`windows-year-${room.id}`}
+                          name={`windows-year-${room.id}`}
                           min={1950}
                           max={new Date().getFullYear()}
                           value={room.windows.installationYear}
-                          onChange={(value) =>
-                            handleWindowsUpdate(
-                              index,
-                              "installationYear",
-                              parseInt(value)
-                            )
-                          }
+                          onChange={(value) => handleWindowsUpdate(
+                            index,
+                            "installationYear",
+                            parseInt(value)
+                          )}
                         >
                           <NumberInputField />
                         </NumberInput>
@@ -1306,6 +1404,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                       {HEATING_TYPES.map((type) => (
                         <Checkbox
                           key={type}
+                          id={`heating-type-${room.id}-${type}`}
+                          name={`heating-type-${room.id}`}
                           isChecked={room.heating.types.includes(type)}
                           onChange={(e) => {
                             const types = e.target.checked
@@ -1322,18 +1422,20 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
 
                   {room.heating.types.length > 0 && (
                     <FormControl>
-                      <FormLabel>Année d'installation</FormLabel>
+                      <FormLabel htmlFor={`heating-year-${room.id}`}>
+                        Année d'installation
+                      </FormLabel>
                       <NumberInput
+                        id={`heating-year-${room.id}`}
+                        name={`heating-year-${room.id}`}
                         min={1950}
                         max={new Date().getFullYear()}
                         value={room.heating.installationYear}
-                        onChange={(value) =>
-                          handleHeatingUpdate(
-                            index,
-                            "installationYear",
-                            parseInt(value)
-                          )
-                        }
+                        onChange={(value) => handleHeatingUpdate(
+                          index,
+                          "installationYear",
+                          parseInt(value)
+                        )}
                       >
                         <NumberInputField />
                       </NumberInput>
@@ -1350,7 +1452,6 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         <VStack spacing={6}>
           <Heading size="md">Configuration de l'isolation</Heading>
           
-          {/* Isolation des combles */}
           <Card width="100%">
             <CardHeader>
               <Heading size="sm">Isolation des combles</Heading>
@@ -1358,8 +1459,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             <CardBody>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Type d'isolation</FormLabel>
+                  <FormLabel htmlFor="isolation-combles-type">Type d'isolation</FormLabel>
                   <Select
+                    id="isolation-combles-type"
+                    name="isolation-combles-type"
                     value={formData.details.isolation.combles.type}
                     onChange={(e) => handleIsolationUpdate('combles', 'type', e.target.value)}
                   >
@@ -1371,8 +1474,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Type d'installation</FormLabel>
+                  <FormLabel htmlFor="isolation-combles-installation">Type d'installation</FormLabel>
                   <Select
+                    id="isolation-combles-installation"
+                    name="isolation-combles-installation"
                     value={formData.details.isolation.combles.installation}
                     onChange={(e) => handleIsolationUpdate('combles', 'installation', e.target.value)}
                   >
@@ -1384,8 +1489,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Épaisseur (cm)</FormLabel>
+                  <FormLabel htmlFor="isolation-combles-thickness">Épaisseur (cm)</FormLabel>
                   <NumberInput
+                    id="isolation-combles-thickness"
+                    name="isolation-combles-thickness"
                     min={1}
                     value={formData.details.isolation.combles.thickness}
                     onChange={(value) => handleIsolationUpdate('combles', 'thickness', parseInt(value))}
@@ -1397,7 +1504,6 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             </CardBody>
           </Card>
 
-          {/* Isolation des murs */}
           <Card width="100%">
             <CardHeader>
               <Heading size="sm">Isolation des murs</Heading>
@@ -1405,8 +1511,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             <CardBody>
               <VStack spacing={4}>
                 <FormControl isRequired>
-                  <FormLabel>Type d'isolation</FormLabel>
+                  <FormLabel htmlFor="isolation-murs-type">Type d'isolation</FormLabel>
                   <Select
+                    id="isolation-murs-type"
+                    name="isolation-murs-type"
                     value={formData.details.isolation.murs.type}
                     onChange={(e) => handleIsolationUpdate('murs', 'type', e.target.value)}
                   >
@@ -1418,8 +1526,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Type d'installation</FormLabel>
+                  <FormLabel htmlFor="isolation-murs-installation">Type d'installation</FormLabel>
                   <Select
+                    id="isolation-murs-installation"
+                    name="isolation-murs-installation"
                     value={formData.details.isolation.murs.installation}
                     onChange={(e) => handleIsolationUpdate('murs', 'installation', e.target.value)}
                   >
@@ -1431,8 +1541,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Épaisseur (cm)</FormLabel>
+                  <FormLabel htmlFor="isolation-murs-thickness">Épaisseur (cm)</FormLabel>
                   <NumberInput
+                    id="isolation-murs-thickness"
+                    name="isolation-murs-thickness"
                     min={1}
                     value={formData.details.isolation.murs.thickness}
                     onChange={(value) => handleIsolationUpdate('murs', 'thickness', parseInt(value))}
@@ -1444,7 +1556,6 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             </CardBody>
           </Card>
 
-          {/* Isolation du sol (si sous-sol présent) */}
           {formData.details.rooms.some(room => room.type === 'Sous-sol') && (
             <Card width="100%">
               <CardHeader>
@@ -1453,8 +1564,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
               <CardBody>
                 <VStack spacing={4}>
                   <FormControl isRequired>
-                    <FormLabel>Type d'isolation</FormLabel>
+                    <FormLabel htmlFor="isolation-sols-type">Type d'isolation</FormLabel>
                     <Select
+                      id="isolation-sols-type"
+                      name="isolation-sols-type"
                       value={formData.details.isolation.sols?.type || ''}
                       onChange={(e) => handleIsolationUpdate('sols', 'type', e.target.value)}
                     >
@@ -1466,8 +1579,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel>Type d'installation</FormLabel>
+                    <FormLabel htmlFor="isolation-sols-installation">Type d'installation</FormLabel>
                     <Select
+                      id="isolation-sols-installation"
+                      name="isolation-sols-installation"
                       value={formData.details.isolation.sols?.installation || ''}
                       onChange={(e) => handleIsolationUpdate('sols', 'installation', e.target.value)}
                     >
@@ -1479,8 +1594,10 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                   </FormControl>
 
                   <FormControl isRequired>
-                    <FormLabel>Épaisseur (cm)</FormLabel>
+                    <FormLabel htmlFor="isolation-sols-thickness">Épaisseur (cm)</FormLabel>
                     <NumberInput
+                      id="isolation-sols-thickness"
+                      name="isolation-sols-thickness"
                       min={1}
                       value={formData.details.isolation.sols?.thickness || 0}
                       onChange={(value) => handleIsolationUpdate('sols', 'thickness', parseInt(value))}
@@ -1505,30 +1622,26 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 <FormControl isRequired>
                   <FormLabel>Type de tableau</FormLabel>
                   <RadioGroup
+                    id="electrical-type"
                     value={formData.details.electrical.type}
-                    onChange={(value) =>
-                      handleInputChange("details.electrical.type", value)
-                    }
+                    onChange={(value) => handleInputChange("details.electrical.type", value)}
                   >
                     <Stack direction="row">
-                      <Radio value="Mono">Mono</Radio>
-                      <Radio value="Triphasé">Triphasé</Radio>
+                      <Radio id="electrical-type-mono" name="electrical-type" value="Mono">Mono</Radio>
+                      <Radio id="electrical-type-tri" name="electrical-type" value="Triphasé">Triphasé</Radio>
                     </Stack>
                   </RadioGroup>
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Année d'installation</FormLabel>
+                  <FormLabel htmlFor="electrical-year">Année d'installation</FormLabel>
                   <NumberInput
+                    id="electrical-year"
+                    name="electrical-year"
                     min={1950}
                     max={new Date().getFullYear()}
                     value={formData.details.electrical.installationYear}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.electrical.installationYear",
-                        parseInt(value)
-                      )
-                    }
+                    onChange={(value) => handleInputChange("details.electrical.installationYear", parseInt(value))}
                   >
                     <NumberInputField />
                   </NumberInput>
@@ -1538,24 +1651,18 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                   <FormLabel>Équipements installés</FormLabel>
                   <Stack spacing={3}>
                     <Checkbox
+                      id="electrical-linky"
+                      name="electrical-linky"
                       isChecked={formData.details.electrical.hasLinky}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.electrical.hasLinky",
-                          e.target.checked
-                        )
-                      }
+                      onChange={(e) => handleInputChange("details.electrical.hasLinky", e.target.checked)}
                     >
                       Compteur Linky
                     </Checkbox>
                     <Checkbox
+                      id="electrical-standards"
+                      name="electrical-standards"
                       isChecked={formData.details.electrical.upToStandards}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.electrical.upToStandards",
-                          e.target.checked
-                        )
-                      }
+                      onChange={(e) => handleInputChange("details.electrical.upToStandards", e.target.checked)}
                     >
                       Aux normes NF-2012
                     </Checkbox>
@@ -1586,6 +1693,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                       {VENTILATION_TYPES.map((type) => (
                         <Checkbox
                           key={type}
+                          id={`ventilation-${room.id}-${type}`}
+                          name={`ventilation-${room.id}`}
                           isChecked={room.ventilation.includes(type)}
                           onChange={(e) => {
                             handleVentilationUpdate(index, type, e.target.checked);
@@ -1611,12 +1720,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             <CardBody>
               <Grid templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"} gap={6}>
                 <FormControl isRequired>
-                  <FormLabel>Type de charpente</FormLabel>
+                  <FormLabel htmlFor="framework-type">Type de charpente</FormLabel>
                   <Select
+                    id="framework-type"
+                    name="framework-type"
                     value={formData.details.framework.type}
-                    onChange={(e) =>
-                      handleInputChange("details.framework.type", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("details.framework.type", e.target.value)}
                   >
                     <option value="">Sélectionnez un type</option>
                     {TYPE_CHARPENTE.map((type) => (
@@ -1626,30 +1735,24 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel>Structure</FormLabel>
+                  <FormLabel htmlFor="framework-beam">Structure</FormLabel>
                   <Checkbox
+                    id="framework-beam"
+                    name="framework-beam"
                     isChecked={formData.details.framework.hasBeam}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.framework.hasBeam",
-                        e.target.checked
-                      )
-                    }
+                    onChange={(e) => handleInputChange("details.framework.hasBeam", e.target.checked)}
                   >
                     Présence de poutre
                   </Checkbox>
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel>Entretien</FormLabel>
+                  <FormLabel htmlFor="framework-maintenance">Entretien</FormLabel>
                   <Checkbox
+                    id="framework-maintenance"
+                    name="framework-maintenance"
                     isChecked={formData.details.framework.hadMaintenance}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.framework.hadMaintenance",
-                        e.target.checked
-                      )
-                    }
+                    onChange={(e) => handleInputChange("details.framework.hadMaintenance", e.target.checked)}
                   >
                     Entretien effectué
                   </Checkbox>
@@ -1657,16 +1760,13 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
 
                 {formData.details.framework.hadMaintenance && (
                   <FormControl>
-                    <FormLabel>Date d'entretien</FormLabel>
+                    <FormLabel htmlFor="framework-maintenance-date">Date d'entretien</FormLabel>
                     <Input
+                      id="framework-maintenance-date"
+                      name="framework-maintenance-date"
                       type="date"
                       value={formData.details.framework.maintenanceDate || ""}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.framework.maintenanceDate",
-                          e.target.value
-                        )
-                      }
+                      onChange={(e) => handleInputChange("details.framework.maintenanceDate", e.target.value)}
                     />
                   </FormControl>
                 )}
@@ -1675,7 +1775,8 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           </Card>
         </VStack>
       );
-      case 11:
+
+    case 11:
       return (
         <VStack spacing={6}>
           <Heading size="md">Configuration de la toiture</Heading>
@@ -1683,12 +1784,12 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             <CardBody>
               <Grid templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"} gap={6}>
                 <FormControl isRequired>
-                  <FormLabel>Type de toiture</FormLabel>
+                  <FormLabel htmlFor="roof-type">Type de toiture</FormLabel>
                   <Select
+                    id="roof-type"
+                    name="roof-type"
                     value={formData.details.roof.type}
-                    onChange={(e) =>
-                      handleInputChange("details.roof.type", e.target.value)
-                    }
+                    onChange={(e) => handleInputChange("details.roof.type", e.target.value)}
                   >
                     <option value="">Sélectionnez un type</option>
                     {TYPE_TOITURE.map((type) => (
@@ -1700,73 +1801,67 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 <FormControl isRequired>
                   <FormLabel>Type de faîtage</FormLabel>
                   <RadioGroup
+                    id="roof-ridge-type"
                     value={formData.details.roof.ridgeType}
-                    onChange={(value) =>
-                      handleInputChange("details.roof.ridgeType", value)
-                    }
+                    onChange={(value) => handleInputChange("details.roof.ridgeType", value)}
                   >
                     <Stack direction="row">
                       {TYPE_FAITAGE.map((type) => (
-                        <Radio key={type} value={type}>{type}</Radio>
+                        <Radio 
+                          key={type} 
+                          id={`roof-ridge-${type}`}
+                          name="roof-ridge-type"
+                          value={type}
+                        >
+                          {type}
+                        </Radio>
                       ))}
                     </Stack>
                   </RadioGroup>
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Date d'entretien</FormLabel>
+                  <FormLabel htmlFor="roof-maintenance-date">Date d'entretien</FormLabel>
                   <Input
+                    id="roof-maintenance-date"
+                    name="roof-maintenance-date"
                     type="date"
                     value={formData.details.roof.maintenanceDate}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.roof.maintenanceDate",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => handleInputChange("details.roof.maintenanceDate", e.target.value)}
                   />
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Type d'entretien effectué</FormLabel>
+                  <FormLabel htmlFor="roof-maintenance-type">Type d'entretien effectué</FormLabel>
                   <Input
+                    id="roof-maintenance-type"
+                    name="roof-maintenance-type"
                     value={formData.details.roof.maintenanceType}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.roof.maintenanceType",
-                        e.target.value
-                      )
-                    }
+                    onChange={(e) => handleInputChange("details.roof.maintenanceType", e.target.value)}
                   />
                 </FormControl>
 
                 <FormControl>
-                  <FormLabel>État général</FormLabel>
+                  <FormLabel htmlFor="roof-impurities">État général</FormLabel>
                   <Checkbox
+                    id="roof-impurities"
+                    name="roof-impurities"
                     isChecked={formData.details.roof.hasImpurities}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.roof.hasImpurities",
-                        e.target.checked
-                      )
-                    }
+                    onChange={(e) => handleInputChange("details.roof.hasImpurities", e.target.checked)}
                   >
                     Présence d'impuretés
                   </Checkbox>
                 </FormControl>
 
                 <FormControl isRequired>
-                  <FormLabel>Année d'installation</FormLabel>
+                  <FormLabel htmlFor="roof-year">Année d'installation</FormLabel>
                   <NumberInput
+                    id="roof-year"
+                    name="roof-year"
                     min={1950}
                     max={new Date().getFullYear()}
                     value={formData.details.roof.installationYear}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.roof.installationYear",
-                        parseInt(value)
-                      )
-                    }
+                    onChange={(value) => handleInputChange("details.roof.installationYear", parseInt(value))}
                   >
                     <NumberInputField />
                   </NumberInput>
@@ -1776,473 +1871,468 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           </Card>
         </VStack>
       );
-
       case 12:
-        interface StateSelectorProps {
-          label?: string;
-          currentValue: ConditionType;
-          onChange: (value: ConditionType) => void;
-          description?: string;
-          mb?: number | string;
-        }
-  
-        const StateSelector: React.FC<StateSelectorProps> = ({ 
-          label,
-          currentValue,
-          onChange,
-          description = "",
-          mb = 6
-        }) => (
-          <Box width="100%" mb={mb} p={4} borderWidth="1px" borderRadius="md">
-            {label && (
-              <Text fontWeight="bold" fontSize="lg" mb={2}>{label}</Text>
-            )}
-            {description && (
-              <Text fontSize="sm" color="gray.600" mb={4}>
-                {description}
-              </Text>
-            )}
-            <Stack 
-              direction={{ base: 'column', sm: 'row' }} 
-              spacing={4} 
-              width="100%"
-            >
-              {[
-                { value: 'Bon' as ConditionType, color: 'green' },
-                { value: 'Moyen' as ConditionType, color: 'yellow' },
-                { value: 'Mauvais' as ConditionType, color: 'red' }
-              ].map((option) => (
-                <Button
-                  key={option.value}
-                  width="100%"
-                  height="60px"
-                  onClick={() => onChange(option.value)}
-                  colorScheme={option.color}
-                  variant={currentValue === option.value ? "solid" : "outline"}
-                  _hover={{ transform: 'none' }}
-                  fontSize="lg"
-                >
-                  {option.value}
-                </Button>
-              ))}
-            </Stack>
-          </Box>
-        );
-  
-        // L'utilisation dans un composant :
-        const RoomConditions: React.FC<{
-          room: Room;
-          index: number;
-        }> = ({ room, index }) => (
-          <VStack spacing={6} align="stretch" width="100%">
-            {room.windows.count > 0 && (
-              <StateSelector
-                label="État des ouvertures"
-                description={`${room.windows.count} ${room.windows.count > 1 ? 'ouvertures' : 'ouverture'} - 
-                  ${room.windows.type === 'simple' ? 'Simple vitrage' : 'Double vitrage'} (${room.windows.installationYear})`}
-                currentValue={room.windows.condition}
-                onChange={(value) => {
-                  handleConditionUpdate(index, "windows", value);
-                }}
-              />
-            )}
-  
-            {room.heating.types.length > 0 && (
-              <StateSelector
-                label="État du chauffage"
-                description={`Types installés: ${room.heating.types.join(', ')}`}
-                currentValue={room.heating.condition}
-                onChange={(value) => {
-                  handleConditionUpdate(index, "heating", value);
-                }}
-              />
-            )}
-  
-            <Box p={4} borderWidth="1px" borderRadius="md">
-              <Text fontWeight="bold" fontSize="lg" mb={4}>Humidité</Text>
-              <FormControl mb={4}>
-                <FormLabel>Taux d'humidité (%)</FormLabel>
-                <NumberInput
-                  value={room.humidity}
-                  min={0}
-                  max={100}
-                  onChange={(value) => handleRoomUpdate(index, "humidity", parseInt(value))}
-                >
-                  <NumberInputField height="50px" fontSize="lg" />
-                </NumberInput>
-              </FormControl>
-              
-              <StateSelector
-                currentValue={room.humidityCondition}
-                onChange={(value) => {
-                  handleConditionUpdate(index, "humidity", value);
-                }}
-                mb={0}
-              />
-            </Box>
-  
-            <StateSelector
-              label="État de la ventilation"
-              description={room.ventilation.length > 0 ? `Types installés: ${room.ventilation.join(', ')}` : 'Aucune ventilation'}
-              currentValue={room.ventilationCondition}
-              onChange={(value) => {
-                handleConditionUpdate(index, "ventilation", value);
-              }}
-            />
-  
-            <StateSelector
-              label="État de l'isolation"
-              currentValue={room.isolation.condition}
-              onChange={(value) => {
-                handleConditionUpdate(index, "isolation", value);
-              }}
-            />
-          </VStack>
-        );
-  
-        return (
-          <VStack spacing={6} align="stretch" width="100%">
-            <Heading size="md" mb={4}>État détaillé par pièce et éléments généraux</Heading>
-  
-            {/* État des combles */}
-            <Card width="100%">
-              <CardHeader>
-                <Heading size="sm">État des combles</Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={6} align="stretch">
+      return (
+        <VStack spacing={6} align="stretch" width="100%">
+          <Heading size="md" mb={4}>État détaillé par pièce et éléments généraux</Heading>
+          
+          {/* État des combles */}
+          <Card width="100%">
+            <CardHeader>
+              <Heading size="sm">État des combles</Heading>
+            </CardHeader>
+            <CardBody>
+              <VStack spacing={6} align="stretch">
+                <FormControl>
+                  <FormLabel htmlFor="combles-humidity">Taux d'humidité des combles (%)</FormLabel>
+                  <NumberInput
+                    id="combles-humidity"
+                    name="combles-humidity"
+                    value={formData.details.isolation.combles.humidityRate}
+                    min={0}
+                    max={100}
+                    onChange={(value) => handleIsolationUpdate('combles', 'humidityRate', parseInt(value))}
+                  >
+                    <NumberInputField height="50px" fontSize="lg" />
+                  </NumberInput>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel htmlFor="combles-condensation">Présence de condensation</FormLabel>
+                  <Checkbox
+                    id="combles-condensation"
+                    name="combles-condensation"
+                    size="lg"
+                    isChecked={formData.details.isolation.combles.hasCondensation}
+                    onChange={(e) => handleIsolationUpdate('combles', 'hasCondensation', e.target.checked)}
+                  >
+                    <Text fontSize="lg">Condensation détectée</Text>
+                  </Checkbox>
+                </FormControl>
+
+                {formData.details.isolation.combles.hasCondensation && (
                   <FormControl>
-                    <FormLabel>Taux d'humidité des combles (%)</FormLabel>
-                    <NumberInput
-                      value={formData.details.isolation.combles.humidityRate}
-                      min={0}
-                      max={100}
-                      onChange={(value) => handleIsolationUpdate('combles', 'humidityRate', parseInt(value))}
-                    >
-                      <NumberInputField height="50px" fontSize="lg" />
-                    </NumberInput>
+                    <FormLabel htmlFor="combles-condensation-location">
+                      Localisation de la condensation
+                    </FormLabel>
+                    <Input
+                      id="combles-condensation-location"
+                      name="combles-condensation-location"
+                      height="50px"
+                      fontSize="lg"
+                      value={formData.details.isolation.combles.condensationLocations[0] || ''}
+                      onChange={(e) => handleIsolationUpdate('combles', 'condensationLocations', [e.target.value])}
+                      placeholder="Décrivez la localisation de la condensation"
+                    />
                   </FormControl>
-  
-                  <FormControl>
-                    <FormLabel>Présence de condensation</FormLabel>
-                    <Checkbox
-                      size="lg"
-                      isChecked={formData.details.isolation.combles.hasCondensation}
-                      onChange={(e) => handleIsolationUpdate('combles', 'hasCondensation', e.target.checked)}
-                    >
-                      <Text fontSize="lg">Condensation détectée</Text>
-                    </Checkbox>
-                  </FormControl>
-  
-                  {formData.details.isolation.combles.hasCondensation && (
-                    <FormControl>
-                      <FormLabel>Localisation de la condensation</FormLabel>
-                      <Input
-                        height="50px"
-                        fontSize="lg"
-                        value={formData.details.isolation.combles.condensationLocations[0] || ''}
-                        onChange={(e) => handleIsolationUpdate('combles', 'condensationLocations', [e.target.value])}
-                        placeholder="Décrivez la localisation de la condensation"
-                      />
-                    </FormControl>
-                  )}
-  
-                  <StateSelector
-                    label="État général des combles"
-                    currentValue={formData.details.isolation.combles.condition}
-                    onChange={(value) => handleIsolationUpdate('combles', 'condition', value)}
-                  />
-                </VStack>
-              </CardBody>
-            </Card>
-  
-            {/* État par pièce */}
-            {formData.details.rooms.map((room, index) => (
-              <Card key={room.id} width="100%">
+                )}
+
+                <StateSelector
+                  label="État général des combles"
+                  currentValue={formData.details.isolation.combles.condition}
+                  onChange={(value) => handleIsolationUpdate('combles', 'condition', value)}
+                  fieldId="combles-condition"
+                />
+              </VStack>
+            </CardBody>
+          </Card>
+
+          {/* État par pièce */}
+          {formData.details.rooms.map((room, index) => {
+            const roomId = room.id;
+            const roomName = room.name || `${room.type} ${index + 1}`;
+            
+            return (
+              <Card key={roomId} width="100%">
                 <CardHeader>
                   <Heading size="sm">
-                    {room.name || `${room.type} ${index + 1}`}{' '}
+                    {roomName}{' '}
                     {room.floor > 0 ? `(Étage ${room.floor})` : "(RDC)"}
                   </Heading>
                 </CardHeader>
                 <CardBody>
-                  <RoomConditions room={room} index={index} />
-                </CardBody>
-              </Card>
-            ))}
-          </VStack>
-        );
-      case 13:
-      return (
-        <VStack spacing={6}>
-          <Heading size="md">Résumé et évaluation globale</Heading>
-
-          {/* Résumé par pièce */}
-          {formData.details.rooms.map((room) => (
-            <Card key={room.id} width="100%" variant="outline">
-              <CardHeader>
-                <Heading size="sm">
-                  {room.name || room.type}{" "}
-                  {room.floor > 0 ? `(Étage ${room.floor})` : "(RDC)"}
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={4} align="stretch">
-                  <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                    {room.windows.count > 0 && (
-                      <Box>
-                        <Text fontWeight="bold">Ouvertures</Text>
-                        <Badge
-                          colorScheme={
-                            room.windows.condition === 'Bon'
-                              ? 'green'
-                              : room.windows.condition === 'Moyen'
-                              ? 'yellow'
-                              : 'red'
-                          }
-                        >
-                          {room.windows.condition}
-                        </Badge>
-                        <Text fontSize="sm" mt={1}>
-                          {room.windows.count} ouverture(s) - {room.windows.type}
-                        </Text>
-                      </Box>
-                    )}
-
-                    {room.heating.types.length > 0 && (
-                      <Box>
-                        <Text fontWeight="bold">Chauffage</Text>
-                        <Badge
-                          colorScheme={
-                            room.heating.condition === 'Bon'
-                              ? 'green'
-                              : room.heating.condition === 'Moyen'
-                              ? 'yellow'
-                              : 'red'
-                          }
-                        >
-                          {room.heating.condition}
-                        </Badge>
-                        <Text fontSize="sm" mt={1}>
-                          Types: {room.heating.types.join(', ')}
-                        </Text>
-                      </Box>
-                    )}
-
-                    <Box>
-                      <Text fontWeight="bold">Humidité</Text>
-                      <Badge
-                        colorScheme={
-                          room.humidityCondition === 'Bon'
-                            ? 'green'
-                            : room.humidityCondition === 'Moyen'
-                            ? 'yellow'
-                            : 'red'
-                        }
-                      >
-                        {room.humidityCondition}
-                      </Badge>
-                      <Text fontSize="sm" mt={1}>
-                        Taux: {room.humidity}%
-                      </Text>
-                    </Box>
-
-                    <Box>
-                      <Text fontWeight="bold">Ventilation</Text>
-                      <Badge
-                        colorScheme={
-                          room.ventilationCondition === 'Bon'
-                            ? 'green'
-                            : room.ventilationCondition === 'Moyen'
-                            ? 'yellow'
-                            : 'red'
-                        }
-                      >
-                        {room.ventilationCondition}
-                      </Badge>
-                      <Text fontSize="sm" mt={1}>
-                        {room.ventilation.length > 0 ? room.ventilation.join(', ') : 'Aucune ventilation'}
-                      </Text>
-                    </Box>
-
-                    <Box>
-                      <Text fontWeight="bold">Isolation</Text>
-                      <Badge
-                        colorScheme={
-                          room.isolation.condition === 'Bon'
-                            ? 'green'
-                            : room.isolation.condition === 'Moyen'
-                            ? 'yellow'
-                            : 'red'
-                        }
-                      >
-                        {room.isolation.condition}
-                      </Badge>
-                    </Box>
-                  </Grid>
-                </VStack>
-              </CardBody>
-            </Card>
-          ))}
-
-          {/* État général du bâtiment */}
-          <Card width="100%">
-            <CardHeader>
-              <Heading size="sm">État général du bâtiment</Heading>
-            </CardHeader>
-            <CardBody>
-              <VStack spacing={6} align="stretch">
-                <Grid templateColumns="repeat(2, 1fr)" gap={4}>
-                  {/* Combles */}
-                  <Box>
-                    <Text fontWeight="bold">Combles</Text>
-                    <Badge
-                      colorScheme={
-                        formData.details.isolation.combles.condition === 'Bon'
-                          ? 'green'
-                          : formData.details.isolation.combles.condition === 'Moyen'
-                          ? 'yellow'
-                          : 'red'
-                      }
-                    >
-                      {formData.details.isolation.combles.condition}
-                    </Badge>
-                    <Text fontSize="sm" mt={1}>
-                      Humidité: {formData.details.isolation.combles.humidityRate}%
-                      {formData.details.isolation.combles.hasCondensation && (
-                        <Badge ml={2} colorScheme="red">Condensation</Badge>
-                      )}
-                    </Text>
-                  </Box>
-
-                  {/* Isolations */}
-                  <Box>
-                    <Text fontWeight="bold">Isolation Murs</Text>
-                    <Badge
-                      colorScheme={
-                        formData.details.isolation.murs.condition === 'Bon'
-                          ? 'green'
-                          : formData.details.isolation.murs.condition === 'Moyen'
-                          ? 'yellow'
-                          : 'red'
-                      }
-                    >
-                      {formData.details.isolation.murs.condition}
-                    </Badge>
-                    <Text fontSize="sm" mt={1}>
-                      Type: {formData.details.isolation.murs.type}
-                    </Text>
-                  </Box>
-
-                  {formData.details.isolation.sols && (
-                    <Box>
-                      <Text fontWeight="bold">Isolation Sols</Text>
-                      <Badge
-                        colorScheme={
-                          formData.details.isolation.sols.condition === 'Bon'
-                            ? 'green'
-                            : formData.details.isolation.sols.condition === 'Moyen'
-                            ? 'yellow'
-                            : 'red'
-                        }
-                      >
-                        {formData.details.isolation.sols.condition}
-                      </Badge>
-                      <Text fontSize="sm" mt={1}>
-                        Type: {formData.details.isolation.sols.type}
-                      </Text>
-                    </Box>
+                  {/* Ouvertures */}
+                  {room.windows.count > 0 && (
+                    <StateSelector
+                      label="État des ouvertures"
+                      description={`${room.windows.count} ${room.windows.count > 1 ? 'ouvertures' : 'ouverture'} - 
+                        ${room.windows.type === 'simple' ? 'Simple vitrage' : 'Double vitrage'} (${room.windows.installationYear})`}
+                      currentValue={room.windows.condition}
+                      onChange={(value) => handleConditionUpdate(index, "windows", value)}
+                      fieldId={`${roomId}-windows-condition`}
+                    />
                   )}
 
-                  <Box>
-                    <Text fontWeight="bold">Charpente</Text>
-                    <Badge
-                      colorScheme={
-                        formData.details.framework.condition === 'Bon'
-                          ? 'green'
-                          : formData.details.framework.condition === 'Moyen'
-                          ? 'yellow'
-                          : 'red'
-                      }
-                    >
-                      {formData.details.framework.condition}
-                    </Badge>
+                  {/* Chauffage */}
+                  {room.heating.types.length > 0 && (
+                    <StateSelector
+                      label="État du chauffage"
+                      description={`Types installés: ${room.heating.types.join(', ')}`}
+                      currentValue={room.heating.condition}
+                      onChange={(value) => handleConditionUpdate(index, "heating", value)}
+                      fieldId={`${roomId}-heating-condition`}
+                    />
+                  )}
+
+                  {/* Humidité */}
+                  <Box p={4} borderWidth="1px" borderRadius="md">
+                    <Text fontWeight="bold" fontSize="lg" mb={4}>Humidité</Text>
+                    <FormControl mb={4}>
+                      <FormLabel htmlFor={`${roomId}-humidity-rate`}>
+                        Taux d'humidité (%)
+                      </FormLabel>
+                      <NumberInput
+                        id={`${roomId}-humidity-rate`}
+                        name={`${roomId}-humidity-rate`}
+                        value={room.humidity}
+                        min={0}
+                        max={100}
+                        onChange={(value) => handleRoomUpdate(index, "humidity", parseInt(value))}
+                      >
+                        <NumberInputField height="50px" fontSize="lg" />
+                      </NumberInput>
+                    </FormControl>
+                    
+                    <StateSelector
+                      currentValue={room.humidityCondition}
+                      onChange={(value) => handleConditionUpdate(index, "humidity", value)}
+                      fieldId={`${roomId}-humidity-condition`}
+                      mb={0}
+                    />
                   </Box>
 
-                  <Box>
-                    <Text fontWeight="bold">Toiture</Text>
-                    <Badge
-                      colorScheme={
-                        formData.details.roof.condition === 'Bon'
-                          ? 'green'
-                          : formData.details.roof.condition === 'Moyen'
-                          ? 'yellow'
-                          : 'red'
-                      }
-                    >
-                      {formData.details.roof.condition}
-                    </Badge>
-                    {formData.details.roof.hasImpurities && (
-                      <Badge ml={2} colorScheme="red">
-                        Présence d'impuretés
-                      </Badge>
-                    )}
-                  </Box>
-                </Grid>
-
-                <Divider />
-
-                {/* Score global et évaluation finale */}
-                <Box>
-                  <HStack justify="space-between" mb={2}>
-                    <Text fontSize="xl">Score global</Text>
-                    <Badge
-                      colorScheme={
-                        formData.evaluations.global.condition === "Favorable"
-                          ? "green"
-                          : formData.evaluations.global.condition === "Correct"
-                          ? "yellow"
-                          : "red"
-                      }
-                      p={2}
-                      borderRadius="full"
-                      fontSize="xl"
-                    >
-                      {evaluationScore.toFixed(1)}/5
-                    </Badge>
-                  </HStack>
-                  <Progress
-                    size="lg"
-                    value={evaluationScore * 20}
-                    colorScheme={
-                      evaluationScore >= 4
-                        ? "green"
-                        : evaluationScore >= 2.5
-                        ? "yellow"
-                        : "red"
-                    }
-                    borderRadius="full"
+                  {/* Ventilation */}
+                  <StateSelector
+                    label="État de la ventilation"
+                    description={room.ventilation.length > 0 ? 
+                      `Types installés: ${room.ventilation.join(', ')}` : 
+                      'Aucune ventilation'}
+                    currentValue={room.ventilationCondition}
+                    onChange={(value) => handleConditionUpdate(index, "ventilation", value)}
+                    fieldId={`${roomId}-ventilation-condition`}
                   />
-                </Box>
 
-                <Box p={4} bg="gray.50" borderRadius="md">
-                  <Text fontSize="lg" fontWeight="bold" mb={2}>
-                    État général:
-                  </Text>
-                  <Text>{formData.evaluations.global.comment}</Text>
-                </Box>
-              </VStack>
-            </CardBody>
-          </Card>
+                  {/* Isolation */}
+                  <StateSelector
+                    label="État de l'isolation"
+                    currentValue={room.isolation.condition}
+                    onChange={(value) => handleConditionUpdate(index, "isolation", value)}
+                    fieldId={`${roomId}-isolation-condition`}
+                  />
+
+                  {/* Charpente */}
+                  <StateSelector
+                    label="État de la charpente"
+                    currentValue={room.charpente?.condition || 'Moyen'}
+                    onChange={(value) => handleConditionUpdate(index, "charpente", value)}
+                    fieldId={`${roomId}-charpente-condition`}
+                  />
+
+                  {/* Toiture */}
+                  <StateSelector
+                    label="État de la toiture"
+                    currentValue={room.toiture?.condition || 'Moyen'}
+                    onChange={(value) => handleConditionUpdate(index, "toiture", value)}
+                    fieldId={`${roomId}-toiture-condition`}
+                  />
+
+                  {/* Façades */}
+                  <StateSelector
+                    label="État des façades"
+                    currentValue={room.facades?.condition || 'Moyen'}
+                    onChange={(value) => handleConditionUpdate(index, "facades", value)}
+                    fieldId={`${roomId}-facades-condition`}
+                  />
+                </CardBody>
+              </Card>
+            );
+          })}
         </VStack>
       );
 
-    default:
-      return null;
-  }
-};
-// Rendu principal du composant ExpertiseForm
+      case 13:
+        return (
+          <VStack spacing={6}>
+            <Heading size="md">Résumé et évaluation globale</Heading>
+
+            {/* Résumé par pièce */}
+            {formData.details.rooms.map((room) => (
+              <Card key={room.id} width="100%" variant="outline">
+                <CardHeader>
+                  <Heading size="sm">
+                    {room.name || room.type}{" "}
+                    {room.floor > 0 ? `(Étage ${room.floor})` : "(RDC)"}
+                  </Heading>
+                </CardHeader>
+                <CardBody>
+                  <VStack spacing={4} align="stretch">
+                    <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                      {/* Ouvertures */}
+                      {room.windows.count > 0 && (
+                        <Box>
+                          <Text fontWeight="bold">Ouvertures</Text>
+                          <Badge
+                            id={`summary-${room.id}-windows-badge`}
+                            colorScheme={
+                              room.windows.condition === 'Bon'
+                                ? 'green'
+                                : room.windows.condition === 'Moyen'
+                                ? 'yellow'
+                                : 'red'
+                            }
+                          >
+                            {room.windows.condition}
+                          </Badge>
+                          <Text fontSize="sm" mt={1}>
+                            {room.windows.count} ouverture(s) - {room.windows.type}
+                          </Text>
+                        </Box>
+                      )}
+
+                      {/* Chauffage */}
+                      {room.heating.types.length > 0 && (
+                        <Box>
+                          <Text fontWeight="bold">Chauffage</Text>
+                          <Badge
+                            id={`summary-${room.id}-heating-badge`}
+                            colorScheme={
+                              room.heating.condition === 'Bon'
+                                ? 'green'
+                                : room.heating.condition === 'Moyen'
+                                ? 'yellow'
+                                : 'red'
+                            }
+                          >
+                            {room.heating.condition}
+                          </Badge>
+                          <Text fontSize="sm" mt={1}>
+                            Types: {room.heating.types.join(', ')}
+                          </Text>
+                        </Box>
+                      )}
+
+                      {/* Humidité */}
+                      <Box>
+                        <Text fontWeight="bold">Humidité</Text>
+                        <Badge
+                          id={`summary-${room.id}-humidity-badge`}
+                          colorScheme={
+                            room.humidityCondition === 'Bon'
+                              ? 'green'
+                              : room.humidityCondition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.humidityCondition}
+                        </Badge>
+                        <Text fontSize="sm" mt={1}>
+                          Taux: {room.humidity}%
+                        </Text>
+                      </Box>
+
+                      {/* Ventilation */}
+                      <Box>
+                        <Text fontWeight="bold">Ventilation</Text>
+                        <Badge
+                          id={`summary-${room.id}-ventilation-badge`}
+                          colorScheme={
+                            room.ventilationCondition === 'Bon'
+                              ? 'green'
+                              : room.ventilationCondition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.ventilationCondition}
+                        </Badge>
+                        <Text fontSize="sm" mt={1}>
+                          {room.ventilation.length > 0 ? room.ventilation.join(', ') : 'Aucune ventilation'}
+                        </Text>
+                      </Box>
+
+                      {/* Isolation */}
+                      <Box>
+                        <Text fontWeight="bold">Isolation</Text>
+                        <Badge
+                          id={`summary-${room.id}-isolation-badge`}
+                          colorScheme={
+                            room.isolation.condition === 'Bon'
+                              ? 'green'
+                              : room.isolation.condition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.isolation.condition}
+                        </Badge>
+                      </Box>
+
+                      {/* Charpente */}
+                      <Box>
+                        <Text fontWeight="bold">Charpente</Text>
+                        <Badge
+                          id={`summary-${room.id}-charpente-badge`}
+                          colorScheme={
+                            room.charpente.condition === 'Bon'
+                              ? 'green'
+                              : room.charpente.condition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.charpente.condition}
+                        </Badge>
+                      </Box>
+
+                      {/* Toiture */}
+                      <Box>
+                        <Text fontWeight="bold">Toiture</Text>
+                        <Badge
+                          id={`summary-${room.id}-toiture-badge`}
+                          colorScheme={
+                            room.toiture.condition === 'Bon'
+                              ? 'green'
+                              : room.toiture.condition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.toiture.condition}
+                        </Badge>
+                      </Box>
+
+                      {/* Façades */}
+                      <Box>
+                        <Text fontWeight="bold">Façades</Text>
+                        <Badge
+                          id={`summary-${room.id}-facades-badge`}
+                          colorScheme={
+                            room.facades.condition === 'Bon'
+                              ? 'green'
+                              : room.facades.condition === 'Moyen'
+                              ? 'yellow'
+                              : 'red'
+                          }
+                        >
+                          {room.facades.condition}
+                        </Badge>
+                      </Box>
+                    </Grid>
+                  </VStack>
+                </CardBody>
+              </Card>
+            ))}
+
+            {/* État général du bâtiment */}
+            <Card width="100%">
+              <CardHeader>
+                <Heading size="sm">État général du bâtiment</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={6} align="stretch">
+                  <Grid templateColumns="repeat(2, 1fr)" gap={4}>
+                    {/* Combles */}
+                    <Box>
+                      <Text fontWeight="bold">Combles</Text>
+                      <Badge
+                        id="summary-combles-badge"
+                        colorScheme={
+                          formData.details.isolation.combles.condition === 'Bon'
+                            ? 'green'
+                            : formData.details.isolation.combles.condition === 'Moyen'
+                            ? 'yellow'
+                            : 'red'
+                        }
+                      >
+                        {formData.details.isolation.combles.condition}
+                      </Badge>
+                      <Text fontSize="sm" mt={1}>
+                        Humidité: {formData.details.isolation.combles.humidityRate}%
+                        {formData.details.isolation.combles.hasCondensation && (
+                          <Badge ml={2} colorScheme="red">Condensation</Badge>
+                        )}
+                      </Text>
+                    </Box>
+
+                    {/* ... autres états ... */}
+                  </Grid>
+
+                  <Divider />
+
+                  {/* Score global et évaluation finale */}
+                  <Box>
+                    <HStack justify="space-between" mb={2}>
+                      <Text fontSize="xl">Score global</Text>
+                      <Badge
+                        id="summary-global-score"
+                        colorScheme={
+                          formData.evaluations.global.condition === "Favorable"
+                            ? "green"
+                            : formData.evaluations.global.condition === "Correct"
+                            ? "yellow"
+                            : "red"
+                        }
+                        p={2}
+                        borderRadius="full"
+                        fontSize="xl"
+                      >
+                        {evaluationScore.toFixed(1)}/5
+                      </Badge>
+                    </HStack>
+                    <Progress
+                      size="lg"
+                      value={evaluationScore * 20}
+                      colorScheme={
+                        evaluationScore >= 4
+                          ? "green"
+                          : evaluationScore >= 2.5
+                          ? "yellow"
+                          : "red"
+                      }
+                      borderRadius="full"
+                    />
+                  </Box>
+
+                  <Box p={4} bg="gray.50" borderRadius="md">
+                    <Text fontSize="lg" fontWeight="bold" mb={2}>
+                      État général:
+                    </Text>
+                    <Text id="summary-global-comment">
+                      {formData.evaluations.global.comment}
+                    </Text>
+                  </Box>
+                </VStack>
+              </CardBody>
+            </Card>
+          </VStack>
+        );
+
+      default:
+        return null;
+    }
+  };
+// Afficher un loader pendant la vérification de l'auth
+if (authLoading) {
   return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Text>Chargement...</Text>
+    </Box>
+  );
+}
+
+// Rediriger si non authentifié
+if (!user) {
+  return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <Text>Non autorisé</Text>
+    </Box>
+  );
+}
+
+  // Return du composant principal
+  return (
+    
     <Box maxW="1200px" mx="auto" p={4}>
       <VStack spacing={8}>
         {/* Barre de progression */}
@@ -2268,6 +2358,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
               <Button
                 onClick={() => setCurrentStep((prev) => prev - 1)}
                 variant="outline"
+                isDisabled={loading}
               >
                 Précédent
               </Button>
@@ -2278,6 +2369,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 onClick={() => setCurrentStep((prev) => prev + 1)}
                 colorScheme="blue"
                 ml={currentStep === 1 ? "auto" : "0"}
+                isDisabled={loading}
               >
                 Suivant
               </Button>
@@ -2287,6 +2379,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
                 colorScheme="green" 
                 ml="auto"
                 isLoading={loading}
+                loadingText="Envoi en cours..."
               >
                 Terminer l'expertise
               </Button>
