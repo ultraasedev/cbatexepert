@@ -336,7 +336,6 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 
     const expertiseData = await Expertise.findById(params.id)
       .populate('createdBy', 'name email id');
-      .select('securiteIncendie impuretes');
 
     if (!expertiseData) {
       return NextResponse.json(
@@ -345,7 +344,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );  
     }
 
-    const rawData = expertiseData.toObject();
+    const rawData = expertiseData.toObject() as any;
 
    // Fonction fléchée pour convertir taux en Bon/Moyen/Mauvais
    const convertTauxToEtat = (taux: number): 'Bon' | 'Moyen' | 'Mauvais' => {
@@ -353,6 +352,13 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     if (taux < 60) return 'Moyen';
     return 'Mauvais';
 };
+// Conversion manuelle de `tauxParPiece` dans `humidite`
+const tauxParPieceConverted = Object.fromEntries(
+  Object.entries(rawData.humidite?.tauxParPiece || {}).map(([piece, taux]) => [
+      piece,
+      convertTauxToEtat(taux as number)  // Assurer que `taux` est interprété comme un nombre
+  ])
+);
     
     const expertise: IExpertise = {
       ...rawData,
@@ -368,13 +374,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       },
       humidite: {
         etat: rawData.humidite?.etat || 'Moyen',
-        tauxParPiece: Object.fromEntries(
-            Object.entries(rawData.humidite?.tauxParPiece || {}).map(([piece, taux]) => [
-                piece,
-                convertTauxToEtat(taux)
-            ])
-        )
+        tauxParPiece: tauxParPieceConverted  // Utiliser la version convertie de `tauxParPiece`
     },
+
       isolation: {
           combles: {
               presence: rawData.isolation?.combles?.presence || false,
