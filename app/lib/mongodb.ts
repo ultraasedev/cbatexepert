@@ -3,13 +3,13 @@ import mongoose from 'mongoose';
 import * as dotenv from 'dotenv';
 
 // Charge les variables d'environnement depuis .env.local
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
   throw new Error(
-    'Veuillez définir la variable MONGODB_URI dans votre fichier .env.local'
+    'Veuillez définir la variable MONGODB_URI dans votre fichier .env'
   );
 }
 

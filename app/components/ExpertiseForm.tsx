@@ -1368,72 +1368,104 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           </VStack>
         );
 
-      case 2:
-        return (
-          <VStack spacing={6}>
-            <Grid
-              templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
-              gap={6}
-              width="100%"
-            >
-              <FormControl isRequired>
-                <FormLabel>Prénom</FormLabel>
+        case 2:
+          return (
+            <VStack spacing={6}>
+              <Grid
+                templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
+                gap={6}
+                width="100%"
+              >
+                <FormControl isRequired>
+                  <FormLabel>Prénom</FormLabel>
+                  <Input
+                    value={formData.details.beneficiary.firstName}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.beneficiary.firstName",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Prénom du bénéficiaire"
+                  />
+                </FormControl>
+        
+                <FormControl isRequired>
+                  <FormLabel>Nom</FormLabel>
+                  <Input
+                    value={formData.details.beneficiary.lastName}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.beneficiary.lastName",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Nom du bénéficiaire"
+                  />
+                </FormControl>
+              </Grid>
+        
+              <FormControl isRequired position="relative">
+                <FormLabel>Adresse</FormLabel>
                 <Input
-                  value={formData.details.beneficiary.firstName}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.beneficiary.firstName",
-                      e.target.value
-                    )
+                  value={formData.details.beneficiary.address}
+                  onChange={(e) => {
+                    handleInputChange("details.beneficiary.address", e.target.value);
+                    fetchAddressSuggestions(e.target.value);
+                  }}
+                  placeholder="Adresse complète"
+                />
+                {addressSuggestions.length > 0 && (
+                  <Box
+                    position="absolute"
+                    zIndex={1}
+                    bg="white"
+                    width="100%"
+                    border="1px solid"
+                    borderColor="gray.200"
+                    borderRadius="md"
+                    mt={2}
+                    maxH="200px"
+                    overflowY="auto"
+                  >
+                    {addressSuggestions.map((suggestion, index) => (
+                      <Box
+                        key={index}
+                        p={2}
+                        cursor="pointer"
+                        _hover={{ bg: "gray.100" }}
+                        onClick={() => {
+                          handleInputChange(
+                            "details.beneficiary.address",
+                            suggestion.label
+                          );
+                          setAddressSuggestions([]);
+                        }}
+                      >
+                        <Text>{suggestion.label}</Text>
+                        <Text fontSize="sm" color="gray.600">
+                          {suggestion.context}
+                        </Text>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </FormControl>
+        
+              <FormControl isRequired>
+                <FormLabel>Téléphone</FormLabel>
+                <PhoneInput
+                  country={"fr"}
+                  value={formData.details.beneficiary.phone}
+                  onChange={(phone) =>
+                    handleInputChange("details.beneficiary.phone", phone)
                   }
-                  placeholder="Prénom du bénéficiaire"
+                  inputStyle={{ width: "100%" }}
+                  specialLabel=""
                 />
               </FormControl>
-
-              <FormControl isRequired>
-                <FormLabel>Nom</FormLabel>
-                <Input
-                  value={formData.details.beneficiary.lastName}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.beneficiary.lastName",
-                      e.target.value
-                    )
-                  }
-                  placeholder="Nom du bénéficiaire"
-                />
-              </FormControl>
-            </Grid>
-
-            <FormControl isRequired>
-              <FormLabel>Adresse</FormLabel>
-              <Input
-                value={formData.details.beneficiary.address}
-                onChange={(e) =>
-                  handleInputChange(
-                    "details.beneficiary.address",
-                    e.target.value
-                  )
-                }
-                placeholder="Adresse complète"
-              />
-            </FormControl>
-
-            <FormControl isRequired>
-              <FormLabel>Téléphone</FormLabel>
-              <PhoneInput
-                country={"fr"}
-                value={formData.details.beneficiary.phone}
-                onChange={(phone) =>
-                  handleInputChange("details.beneficiary.phone", phone)
-                }
-                inputStyle={{ width: "100%" }}
-                specialLabel=""
-              />
-            </FormControl>
-          </VStack>
-        );
-
+            </VStack>
+          );
       case 3:
         return (
           <VStack spacing={6}>
@@ -1490,117 +1522,124 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           </VStack>
         );
 
-      case 4:
-        return (
-          <VStack spacing={6}>
-            <Flex justify="space-between" align="center" width="100%">
-              <Heading size="md">Configuration des pièces</Heading>
-              <Button
-                leftIcon={<FaPlus />}
-                colorScheme="blue"
-                onClick={() => {
-                  const newRoom: Room = {
-                    id: Date.now().toString(),
-                    type: "",
-                    name: "",
-                    floor: 0,
-                    humidity: 0,               // Ajout de la propriété manquante
-                    humidityCondition: "Moyen", // Ajout de la propriété manquante
-                    windows: {
-                      count: 0,
-                      type: "simple",
-                      installationYear: new Date().getFullYear(),
-                      condition: "Moyen"
-                    },
-                    condition: {
-                      windows: "Moyen",
-                      heating: "Moyen",
-                      humidity: "Moyen"
-                    },
-                    ventilation: [],           // Ajout de la propriété manquante
-                    ventilationCondition: "Moyen" // Ajout de la propriété manquante
-                  };
-                  
-
-                  setFormData((prev) => ({
-                    ...prev,
-                    details: {
-                      ...prev.details,
-                      rooms: [newRoom, ...prev.details.rooms]
-                    }
-                  }));
-                }}
-              >
-                Ajouter une pièce
-              </Button>
-            </Flex>
-
-            {formData.details.rooms.map((room, index) => (
-              <Card key={room.id} width="100%" variant="outline">
-                <CardBody>
-                  <VStack spacing={4}>
-                    <Grid
-                      templateColumns={isMobile ? "1fr" : "repeat(3, 1fr) auto"}
-                      gap={4}
-                      width="100%"
-                      alignItems="end"
-                    >
-                      <FormControl isRequired>
-                        <FormLabel>Type de pièce</FormLabel>
-                        <Select
-                          value={room.type}
-                          onChange={(e) =>
-                            handleRoomUpdate(index, "type", e.target.value)
-                          }
-                        >
-                          <option value="">Sélectionnez un type</option>
-                          {ROOM_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type}
-                            </option>
-                          ))}
-                        </Select>
-                      </FormControl>
-
-                      <FormControl isRequired>
-                        <FormLabel>Nom de la pièce</FormLabel>
-                        <Input
-                          value={room.name}
-                          onChange={(e) =>
-                            handleRoomUpdate(index, "name", e.target.value)
-                          }
-                          placeholder={`${room.type || "Pièce"} ${index + 1}`}
+        case 4:
+          return (
+            <VStack spacing={6}>
+              <Flex justify="space-between" align="center" width="100%">
+                <Heading size="md">Configuration des pièces</Heading>
+                <Button
+                  leftIcon={<FaPlus />}
+                  colorScheme="blue"
+                  onClick={() => {
+                    const newRoom: Room = {
+                      id: Date.now().toString(),
+                      type: "",
+                      name: "",
+                      floor: 0,
+                      humidity: 0,
+                      humidityCondition: "Moyen",
+                      windows: {
+                        count: 0,
+                        type: "simple",
+                        installationYear: new Date().getFullYear(),
+                        condition: "Moyen"
+                      },
+                      condition: {
+                        windows: "Moyen",
+                        heating: "Moyen",
+                        humidity: "Moyen"
+                      },
+                      ventilation: [],
+                      ventilationCondition: "Moyen"
+                    };
+        
+                    setFormData((prev) => ({
+                      ...prev,
+                      details: {
+                        ...prev.details,
+                        rooms: [newRoom, ...prev.details.rooms]
+                      }
+                    }));
+                  }}
+                >
+                  Ajouter une pièce
+                </Button>
+              </Flex>
+        
+              {formData.details.rooms.map((room, index) => (
+                <Card key={room.id} width="100%" variant="outline">
+                  <CardBody>
+                    <VStack spacing={4}>
+                      <Grid
+                        templateColumns={isMobile ? "1fr" : "repeat(3, 1fr) auto"}
+                        gap={4}
+                        width="100%"
+                        alignItems="end"
+                      >
+                        <FormControl isRequired>
+                          <FormLabel>Type de pièce</FormLabel>
+                          <Select
+                            value={room.type}
+                            onChange={(e) => {
+                              handleRoomUpdate(index, "type", e.target.value);
+                              // Mise à jour automatique du nom si pas déjà défini
+                              if (!room.name || room.name === "") {
+                                const newType = e.target.value;
+                                const sameTypeCount = formData.details.rooms.filter(
+                                  (r) => r.type === newType
+                                ).length;
+                                const newName = sameTypeCount > 0 ? `${newType} ${sameTypeCount + 1}` : newType;
+                                handleRoomUpdate(index, "name", newName);
+                              }
+                            }}
+                          >
+                            <option value="">Sélectionnez un type</option>
+                            {ROOM_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+        
+                        <FormControl isRequired>
+                          <FormLabel>Nom de la pièce</FormLabel>
+                          <Input
+                            value={room.name}
+                            onChange={(e) => handleRoomUpdate(index, "name", e.target.value)}
+                            placeholder={room.type ? `${room.type}` : "Nom de la pièce"}
+                          />
+                        </FormControl>
+        
+                        <FormControl>
+                          <FormLabel>Étage</FormLabel>
+                          <NumberInput
+                            min={0}
+                            max={formData.details.construction.floors}
+                            value={room.floor}
+                            onChange={(value) =>
+                              handleRoomUpdate(index, "floor", parseInt(value))
+                            }
+                          >
+                            <NumberInputField />
+                          </NumberInput>
+                        </FormControl>
+        
+                        <IconButton
+                          aria-label="Supprimer la pièce"
+                          icon={<FaTrash />}
+                          colorScheme="red"
+                          variant="ghost"
+                          onClick={() => removeRoom(index)}
                         />
-                      </FormControl>
-
-                      <FormControl>
-                        <FormLabel>Étage</FormLabel>
-                        <NumberInput
-                          min={0}
-                          max={formData.details.construction.floors}
-                          value={room.floor}
-                          onChange={(value) =>
-                            handleRoomUpdate(index, "floor", parseInt(value))
-                          }
-                        >
-                          <NumberInputField />
-                        </NumberInput>
-                      </FormControl>
-
-                      <IconButton
-                        aria-label="Supprimer la pièce"
-                        icon={<FaTrash />}
-                        colorScheme="red"
-                        variant="ghost"
-                        onClick={() => removeRoom(index)}
-                      />
-                    </Grid>
-                  </VStack>
-                </CardBody>
-              </Card>
-            ))}
-          </VStack>
-        );
+                      </Grid>
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))}
+            </VStack>
+          );
+        
 
       case 5:
         return (
@@ -2433,228 +2472,202 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
             </Card>
           </VStack>
         );
-      case 12:
-        return (
-          <VStack spacing={6}>
-            <Heading size="md">
-              État détaillé par pièce et éléments généraux
-            </Heading>
-
-            {/* Évaluation par pièce */}
-            {formData.details.rooms.map((room, index) => (
-              <Card key={room.id} width="100%">
-                <CardHeader>
-                  <Heading size="sm">
-                    {room.name || `${room.type} ${index + 1}`}
-                    {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
-                  </Heading>
-                </CardHeader>
-                <CardBody>
-                  <VStack spacing={4}>
-                    {/* État des ouvertures */}
-                    {room.windows.count > 0 && (
-                      <StateSelector
-                        label={`État des ouvertures (${room.windows.count} ${
-                          room.windows.count > 1 ? "ouvertures" : "ouverture"
-                        })`}
-                        currentValue={room.condition.windows}
-                        onChange={(value) =>
-                          handleConditionUpdate(index, "windows", value)
-                        }
-                        fieldId={`${room.id}-windows-state`}
-                      />
-                    )}
-
-                    {/* État du chauffage si la pièce est équipée */}
-                    {formData.details.chauffage.localisations.includes(
-                      room.id
-                    ) && (
-                      <StateSelector
-                        label="État du chauffage"
-                        currentValue={room.condition.heating}
-                        onChange={(value) =>
-                          handleConditionUpdate(index, "heating", value)
-                        }
-                        fieldId={`${room.id}-heating-state`}
-                      />
-                    )}
-
-                    {/* Taux d'humidité de la pièce */}
-                    <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
-                      <Text fontWeight="bold" fontSize="lg" mb={4}>
-                        Humidité
-                      </Text>
-                      <FormControl mb={4}>
-                        <FormLabel>Taux d'humidité (%)</FormLabel>
-                        <NumberInput
-                          value={room.humidity}
-                          min={0}
-                          max={100}
+     
+        case 12:
+          return (
+            <VStack spacing={6}>
+              <Heading size="md">État détaillé par pièce et éléments généraux</Heading>
+        
+              {/* Évaluation par pièce */}
+              {formData.details.rooms.map((room, index) => (
+                <Card key={room.id} width="100%">
+                  <CardHeader>
+                    <Heading size="sm">
+                      {room.name || `${room.type} ${index + 1}`}
+                      {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack spacing={4}>
+                      {/* État des ouvertures */}
+                      {room.windows.count > 0 && (
+                        <StateSelector
+                          label={`État des ouvertures (${room.windows.count} ${
+                            room.windows.count > 1 ? "ouvertures" : "ouverture"
+                          })`}
+                          currentValue={room.condition.windows}
                           onChange={(value) =>
-                            handleRoomUpdate(index, "humidity", parseInt(value))
+                            handleConditionUpdate(index, "windows", value)
                           }
-                        >
-                          <NumberInputField />
-                        </NumberInput>
-                      </FormControl>
-
+                          fieldId={`${room.id}-windows-state`}
+                        />
+                      )}
+        
+                      {/* État du chauffage si la pièce est équipée */}
+                      {formData.details.chauffage.localisations.includes(room.id) && (
+                        <StateSelector
+                          label="État du chauffage"
+                          currentValue={room.condition.heating}
+                          onChange={(value) =>
+                            handleConditionUpdate(index, "heating", value)
+                          }
+                          fieldId={`${room.id}-heating-state`}
+                        />
+                      )}
+        
+                      {/* État de l'humidité */}
                       <StateSelector
-                        currentValue={room.condition.humidity}
+                        label="État de l'humidité"
+                        currentValue={room.humidityCondition}
                         onChange={(value) =>
                           handleConditionUpdate(index, "humidity", value)
                         }
                         fieldId={`${room.id}-humidity-state`}
-                        mb={0}
+                        description="Évaluation de l'humidité dans la pièce"
                       />
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))}
+        
+              {/* État général de la maison et de ses installations */}
+              <Card width="100%">
+                <CardHeader>
+                  <Heading size="sm">
+                    État Général de la maison et de ses installations
+                  </Heading>
+                </CardHeader>
+                <CardBody>
+                  <VStack spacing={6}>
+                    {/* État de l'humidité générale */}
+                    <StateSelector
+                      label="État de l'humidité générale"
+                      currentValue={formData.details.humidite.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.humidite.condition", value)
+                      }
+                      fieldId="humidity-walls-state"
+                    />
+        
+                    {/* État des impuretés */}
+                    <StateSelector
+                      label="État des impuretés"
+                      currentValue={formData.details.impuretes.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.impuretes.condition", value)
+                      }
+                      fieldId="impurities-state"
+                    />
+        
+                    {/* État de la façade */}
+                    <StateSelector
+                      label="État de la façade"
+                      currentValue={formData.details.facades[0].condition}
+                      onChange={(value) =>
+                        handleInputChange("details.facades[0].condition", value)
+                      }
+                      fieldId="facade-state"
+                    />
+        
+                    {/* État de la toiture */}
+                    <StateSelector
+                      label="État de la toiture"
+                      currentValue={formData.details.toiture.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.toiture.condition", value)
+                      }
+                      fieldId="roof-state"
+                    />
+        
+                    {/* État de la charpente */}
+                    <StateSelector
+                      label="État de la charpente"
+                      currentValue={formData.details.charpente.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.charpente.condition", value)
+                      }
+                      fieldId="framework-state"
+                    />
+        
+                    {/* État de la ventilation */}
+                    <StateSelector
+                      label="État de la ventilation"
+                      currentValue={formData.details.ventilation.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.ventilation.condition", value)
+                      }
+                      fieldId="ventilation-state"
+                    />
+        
+                    {/* État des normes électriques */}
+                    <StateSelector
+                      label="État des normes électriques"
+                      currentValue={formData.details.electrical.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.electrical.condition", value)
+                      }
+                      fieldId="electrical-state"
+                    />
+        
+                    {/* État des combles */}
+                    <StateSelector
+                      label="État des combles"
+                      currentValue={formData.details.isolation.combles.condition}
+                      onChange={(value) =>
+                        handleInputChange(
+                          "details.isolation.combles.condition",
+                          value
+                        )
+                      }
+                      fieldId="combles-state"
+                    />
+        
+                    {/* Protection incendie */}
+                    <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
+                      <Text fontWeight="bold" fontSize="lg" mb={4}>
+                        Protection incendie
+                      </Text>
+                      <Stack spacing={3}>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.bouleIncendie}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.bouleIncendie",
+                              e.target.checked
+                            )
+                          }
+                        >
+                          Boule incendie
+                        </Checkbox>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.extincteur}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.extincteur",
+                              e.target.checked
+                            )
+                          }
+                        >
+                          Extincteur
+                        </Checkbox>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.detecteurFumee}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.detecteurFumee",
+                              e.target.checked
+                            )
+                          }
+                        >
+                          Détecteur de fumée
+                        </Checkbox>
+                      </Stack>
                     </Box>
                   </VStack>
                 </CardBody>
               </Card>
-            ))}
-
-            {/* État général de la maison et de ses installations */}
-            <Card width="100%">
-              <CardHeader>
-                <Heading size="sm">
-                  État Général de la maison et de ses installations
-                </Heading>
-              </CardHeader>
-              <CardBody>
-                <VStack spacing={6}>
-                  {/* Taux d'humidité murs */}
-                  <StateSelector
-                    label="Taux d'humidité murs"
-                    currentValue={formData.details.humidite.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.humidite.condition", value)
-                    }
-                    fieldId="humidity-walls-state"
-                  />
-
-                  {/* Présence d'impuretés */}
-                  <StateSelector
-                    label="Présence d'impuretés"
-                    currentValue={formData.details.impuretes.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.impuretes.condition", value)
-                    }
-                    fieldId="impurities-state"
-                  />
-
-                  {/* État de la façade */}
-                  <StateSelector
-                    label="État de la façade"
-                    currentValue={formData.details.facades[0].condition}
-                    onChange={(value) =>
-                      handleInputChange("details.facades[0].condition", value)
-                    }
-                    fieldId="facade-state"
-                  />
-
-                  {/* État de la toiture */}
-                  <StateSelector
-                    label="État de la toiture"
-                    currentValue={formData.details.toiture.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.toiture.condition", value)
-                    }
-                    fieldId="roof-state"
-                  />
-
-                  {/* État de la charpente */}
-                  <StateSelector
-                    label="État de la charpente"
-                    currentValue={formData.details.charpente.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.charpente.condition", value)
-                    }
-                    fieldId="framework-state"
-                  />
-
-                  {/* État de la ventilation */}
-                  <StateSelector
-                    label="État de la ventilation"
-                    currentValue={formData.details.ventilation.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.ventilation.condition", value)
-                    }
-                    fieldId="ventilation-state"
-                  />
-
-                  {/* État des normes électriques */}
-                  <StateSelector
-                    label="État des normes électriques"
-                    currentValue={formData.details.electrical.condition}
-                    onChange={(value) =>
-                      handleInputChange("details.electrical.condition", value)
-                    }
-                    fieldId="electrical-state"
-                  />
-
-                  {/* État des combles */}
-                  <StateSelector
-                    label="État des combles"
-                    currentValue={formData.details.isolation.combles.condition}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.isolation.combles.condition",
-                        value
-                      )
-                    }
-                    fieldId="combles-state"
-                  />
-
-                  {/* Protection incendie */}
-                  <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
-                    <Text fontWeight="bold" fontSize="lg" mb={4}>
-                      Protection incendie
-                    </Text>
-                    <Stack spacing={3}>
-                      <Checkbox
-                        isChecked={
-                          formData.details.securiteIncendie.bouleIncendie
-                        }
-                        onChange={(e) =>
-                          handleInputChange(
-                            "details.securiteIncendie.bouleIncendie",
-                            e.target.checked
-                          )
-                        }
-                      >
-                        Boule incendie
-                      </Checkbox>
-                      <Checkbox
-                        isChecked={formData.details.securiteIncendie.extincteur}
-                        onChange={(e) =>
-                          handleInputChange(
-                            "details.securiteIncendie.extincteur",
-                            e.target.checked
-                          )
-                        }
-                      >
-                        Extincteur
-                      </Checkbox>
-                      <Checkbox
-                        isChecked={
-                          formData.details.securiteIncendie.detecteurFumee
-                        }
-                        onChange={(e) =>
-                          handleInputChange(
-                            "details.securiteIncendie.detecteurFumee",
-                            e.target.checked
-                          )
-                        }
-                      >
-                        Détecteur de fumée
-                      </Checkbox>
-                    </Stack>
-                  </Box>
-                </VStack>
-              </CardBody>
-            </Card>
-          </VStack>
-        );
-
+            </VStack>
+          );
       case 13:
         return (
           <VStack spacing={6}>

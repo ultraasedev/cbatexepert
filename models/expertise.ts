@@ -15,16 +15,16 @@ interface GlobalEvaluation {
 
 interface BaseIsolation {
   presence: boolean;
-  type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales' | '';
-  pose: 'Sous rampants' | 'En soufflage' | 'En rouleau' | '';
+  type: "Ouate de cellulose" | "Laine de Roche" | "Laine de Verre" | "Isolation Minerales" | string;
+  pose: "Sous rampants" | "En soufflage" | "En rouleau";
   epaisseur: number;
   etat: 'Bon' | 'Moyen' | 'Mauvais';
 }
 
 interface CombleIsolation extends BaseIsolation {
   presenceCondensation: boolean;
-  localisationCondensation?: string;
-  tauxHumiditeCombles: number;
+  zonesCondensation: string[];
+  tauxHumidite: number;
   etatCombles: 'Bon' | 'Moyen' | 'Mauvais';
 }
 
@@ -185,8 +185,8 @@ const ExpertiseSchema = new mongoose.Schema({
       epaisseur: { type: Number },
       etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
       presenceCondensation: { type: Boolean, required: true },
-      localisationCondensation: { type: String },
-      tauxHumiditeCombles: { type: Number, required: true },
+      zonesCondensation: [{ type: String }],
+      tauxHumidite: { type: Number, required: true },
       etatCombles: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
     },
     murs: {
@@ -221,6 +221,20 @@ const ExpertiseSchema = new mongoose.Schema({
     presenceImpuretes: { type: Boolean, required: true },
     annee: { type: Number, required: true },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+  },
+
+  impuretes: {
+    condition: { 
+      type: String, 
+      enum: ['Bon', 'Moyen', 'Mauvais'], 
+      required: true 
+    }
+  },
+
+  securiteIncendie: {
+    bouleIncendie: { type: Boolean, required: true },
+    extincteur: { type: Boolean, required: true },
+    detecteurFumee: { type: Boolean, required: true }
   },
 
   evaluations: {

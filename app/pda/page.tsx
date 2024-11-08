@@ -61,19 +61,11 @@ interface PdaSummary {
 
 const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
   try {
-    const response = await fetch(`/api/pda/${plan._id}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-        Accept: "application/pdf",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Erreur lors de la récupération des données formatées");
+    // On vérifie d'abord si on a toutes les données nécessaires
+    if (!plan || !plan._id) {
+      throw new Error("Données du plan invalides");
     }
 
-    const data = await response.json();
-    const formattedPDA = data.data;
     // Fonction pour formater les nombres avec une virgule
     const formatNumber = (num: number) => {
       return new Intl.NumberFormat("fr-FR", {
@@ -96,7 +88,7 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
     doc.setTextColor(0, 0, 0);
     doc.text("PLAN D'AIDE À L'HABITAT", 105, 20, { align: "center" });
     doc.setFontSize(10);
-    doc.text(`Référence: ${formattedPDA._id}`, 105, 30, { align: "center" });
+    doc.text(`Référence: ${plan._id}`, 105, 30, { align: "center" });
 
     // Rectangle "Éligible" en vert
     doc.setFillColor(34, 197, 94); // Vert
@@ -115,11 +107,11 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
     doc.text("Nom complet:", 20, 73);
-    doc.text(formattedPDA.details.beneficiary.name, 80, 73);
+    doc.text(plan.details.beneficiary.name, 80, 73);
     doc.text("Téléphone:", 20, 83);
-    doc.text(formattedPDA.details.beneficiary.phone, 80, 83);
+    doc.text(plan.details.beneficiary.phone, 80, 83);
     doc.text("Adresse:", 20, 93);
-    doc.text(formattedPDA.details.beneficiary.address, 80, 93);
+    doc.text(plan.details.beneficiary.address, 80, 93);
 
     // Section Nature des Travaux
     doc.setFontSize(16);
@@ -129,7 +121,7 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
 
     doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text(formattedPDA.details.typeOfImprovement, 20, 126);
+    doc.text(plan.details.typeOfImprovement, 20, 126);
 
     // Section Données Financières
     doc.setFontSize(16);
@@ -159,39 +151,16 @@ const downloadPDF = async (plan: PdaSummary): Promise<Blob> => {
     };
 
     // Afficher les montants dans des cadres colorés
-    drawFinanceBox(
-      20,
-      "Revenu fiscal",
-      formattedPDA.details.fiscalIncome,
-      235,
-      245,
-      255
-    );
-    drawFinanceBox(
-      85,
-      "Coût estimé",
-      formattedPDA.details.estimatedCost,
-      240,
-      240,
-      240
-    );
-    drawFinanceBox(
-      150,
-      "Montant de l'aide",
-      formattedPDA.details.grantAmount,
-      240,
-      250,
-      240
-    );
+    drawFinanceBox(20, "Revenu fiscal", plan.details.fiscalIncome, 235, 245, 255);
+    drawFinanceBox(85, "Coût estimé", plan.details.estimatedCost, 240, 240, 240);
+    drawFinanceBox(150, "Montant de l'aide", plan.details.grantAmount, 240, 250, 240);
 
     // Pied de page
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(128, 128, 128);
     doc.text(
-      `Date de création: ${new Date(formattedPDA.createdAt).toLocaleDateString(
-        "fr-FR"
-      )}`,
+      `Date de création: ${new Date(plan.createdAt).toLocaleDateString("fr-FR")}`,
       20,
       270
     );
