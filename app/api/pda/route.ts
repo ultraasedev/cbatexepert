@@ -1,6 +1,6 @@
 // app/api/pda/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '../../lib/mongodb';
+import {dbConnect } from '../../lib/mongodb';
 import PDA from '../../../models/pda';
 import jwt from 'jsonwebtoken';
 
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
   
   try {
     // Connexion à la base de données
-    await connectDB();
+    await dbConnect();
     console.log('Connexion MongoDB établie');
 
     // Vérification de l'authentification
@@ -132,7 +132,7 @@ export async function GET(request: NextRequest) {
   console.log('------------- Début de la requête GET -------------');
   
   try {
-    await connectDB();
+    await dbConnect();
 
     const user = authenticateToken(request);
     console.log('Utilisateur authentifié pour GET:', user);
@@ -176,7 +176,7 @@ export async function PUT(request: NextRequest) {
   console.log('------------- Début de la requête PUT -------------');
   
   try {
-    await connectDB();
+    await dbConnect();
 
     const user = authenticateToken(request);
     if (!user) {
@@ -232,7 +232,7 @@ export async function DELETE(request: NextRequest) {
   console.log('------------- Début de la requête DELETE -------------');
   
   try {
-    await connectDB();
+    await dbConnect();
 
     const user = authenticateToken(request);
     if (!user) {

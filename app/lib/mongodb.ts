@@ -1,108 +1,59 @@
-// app/lib/mongodb.ts
 import mongoose from 'mongoose';
-import * as dotenv from 'dotenv';
 
-// Charge les variables d'environnement depuis .env.local
-dotenv.config({ path: '.env' });
-
+// URI MongoDB depuis les variables d'environnement
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
-  throw new Error(
-    'Veuillez définir la variable MONGODB_URI dans votre fichier .env'
-  );
+    throw new Error('La variable d\'environnement MONGODB_URI est manquante');
 }
 
-interface CachedMongoose {
-  conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
-}
+// Variable pour suivre l'état de la connexion (utile pour les environnements serverless)
+let isConnected = false;
 
-declare global {
-  var mongoose: CachedMongoose | undefined;
-}
-
-let cached: CachedMongoose = global.mongoose || {
-  conn: null,
-  promise: null,
+// Options de connexion pour Mongoose
+const options = {
+    bufferCommands: false, // Désactive la file d'attente des commandes jusqu'à la connexion
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
 };
 
-if (!global.mongoose) {
-  global.mongoose = cached;
-}
+// Fonction de connexion MongoDB
+export const dbConnect = async () => {
+    // Vérifie si la connexion est déjà établie
+    if (isConnected) {
+        console.log("Utilisation de la connexion MongoDB existante");
+        return;
+    }
 
-export async function connectDB(): Promise<typeof mongoose> {
-  if (cached.conn) {
-    console.log('✅ Utilisation de la connexion MongoDB existante');
-    return cached.conn;
-  }
-
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      family: 4,
-    };
-
-    mongoose.set('strictQuery', true);
-
-    cached.promise = mongoose
-      .connect(MONGODB_URI!, opts)
-      .then((mongoose) => {
-        console.log('✅ Nouvelle connexion MongoDB établie');
-        return mongoose;
-      })
-      .catch((error) => {
-        console.error('❌ Erreur de connexion MongoDB:', error);
-        cached.promise = null;
+    try {
+        // Connexion à MongoDB
+        await mongoose.connect(MONGODB_URI, options);
+        isConnected = true; // Marque la connexion comme établie
+        console.log("Connexion à MongoDB établie avec succès.");
+    } catch (error) {
+        console.error("Erreur lors de la connexion à MongoDB:", error);
         throw error;
-      });
-  }
+    }
+};
 
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
-
-  return cached.conn;
-}
-
-// Fonction pour fermer la connexion (utile pour les tests)
-export async function disconnectDB(): Promise<void> {
-  if (cached.conn) {
-    await cached.conn.disconnect();
-    cached.conn = null;
-    cached.promise = null;
-    console.log('✅ Déconnexion MongoDB réussie');
-  }
-}
-
-// Fonction pour vérifier l'état de la connexion
-export function isConnected(): boolean {
-  return mongoose.connection.readyState === 1;
-}
-
-// Gestionnaire d'événements de connexion
+// Gestion des événements de connexion (facultatif mais recommandé pour le suivi)
 mongoose.connection.on('connected', () => {
-  console.log('✅ MongoDB connecté avec succès');
+    console.log('Mongoose est connecté à MongoDB');
 });
 
 mongoose.connection.on('error', (err) => {
-  console.error('❌ Erreur MongoDB:', err);
+    console.error(`Erreur de connexion Mongoose : ${err}`);
 });
 
 mongoose.connection.on('disconnected', () => {
-  console.log('⚠️ MongoDB déconnecté');
+    console.log('Mongoose est déconnecté de MongoDB');
 });
 
-// Gestion de la fermeture propre lors de l'arrêt de l'application
-process.on('SIGINT', async () => {
-  await disconnectDB();
-  process.exit(0);
-});
-
-export default connectDB;
+// Nettoyage de la connexion lors de l'arrêt du processus (utile pour les environnements locaux)
+if (process.env.NODE_ENV !== 'production') {
+    process.on('SIGINT', async () => {
+        await mongoose.connection.close();
+        console.log('Connexion MongoDB fermée en raison de la fin du processus');
+        process.exit(0);
+    });
+}

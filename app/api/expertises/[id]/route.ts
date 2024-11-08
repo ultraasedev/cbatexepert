@@ -1,7 +1,7 @@
 // /app/api/expertises/[id]/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '../../../lib/mongodb';
+import {dbConnect} from '../../../lib/mongodb';
 import Expertise from '../../../../models/expertise';
 import { logger } from '../../../lib/logger';
 import jwt from 'jsonwebtoken';
@@ -42,7 +42,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const user = authenticateToken(request);
     if (!user) {
@@ -92,7 +92,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const user = authenticateToken(request);
     if (!user) {
@@ -152,7 +152,7 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const user = authenticateToken(request);
     if (!user) {

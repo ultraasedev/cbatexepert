@@ -1,10 +1,10 @@
 // /app/api/expertises/[id]/pdf/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '../../../../lib/mongodb';
+import {dbConnect} from '../../../../lib/mongodb';
 import Expertise from '../../../../../models/expertise';
 import { logger } from '../../../../lib/logger';
-import jwt from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';     
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -324,7 +324,7 @@ const generateRecommendations = (expertise: IExpertise): string => {
 
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
-    await connectDB();
+    await dbConnect();
     
     const user = authenticateToken(request);
     if (!user) {

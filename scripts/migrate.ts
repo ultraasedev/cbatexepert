@@ -1,9 +1,9 @@
 // scripts/migrate.ts
-import dbConnect from '../app/lib/mongodb';
+import {dbConnect} from '../app/lib/mongodb';
 import PDA from '../models/pda';
 import User from '../models/user';
 import Expertise from '../models/expertise';
-
+ 
 // Données d'expertise de base
 const baseExpertiseData = {
   typeLogement: 'appartement',

@@ -1,6 +1,6 @@
 // app/api/user/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import dbConnect from '../../lib/mongodb';
+import {dbConnect} from '../../lib/mongodb';
 import User from '../../../models/user';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';

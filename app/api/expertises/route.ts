@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import connectDB from '../../lib/mongodb';
+import {dbConnect } from '../../lib/mongodb';
 import Expertise from '../../../models/expertise';
 import jwt from 'jsonwebtoken';
 import { logger } from '../../lib/logger';
@@ -38,7 +38,7 @@ const authenticateToken = (request: NextRequest) => {
 // Route GET pour récupérer toutes les expertises
 export async function GET(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
 
     const user = authenticateToken(request);
     if (!user) {
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 // Route POST pour créer une nouvelle expertise
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
+    await dbConnect();
 
     const user = authenticateToken(request);
     if (!user) {
