@@ -1173,10 +1173,24 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           }
         },
         toiture: {
-          ...formData.details.roof,
-          presenceImpuretes: false, // Doit être un booléen, pas une chaîne
-          etat: formData.details.roof.condition
+          type: formData.details.roof.type,           // Changement de roof à toiture
+    typeFaitage: formData.details.roof.ridgeType,
+    dateEntretien: new Date(formData.details.roof.maintenanceDate).getTime(),
+    typeEntretien: formData.details.roof.maintenanceType || '',
+    presenceImpuretes: formData.details.roof.hasImpurities,
+    annee: formData.details.roof.installationYear || new Date().getFullYear(),
+    etat: formData.details.roof.condition
         },
+
+  charpente: {
+    type: formData.details.framework.type,         // Changement de framework à charpente
+    presenceArtive: formData.details.framework.hasBeam,
+    entretienEffectue: formData.details.framework.hadMaintenance,
+    dateEntretien: formData.details.framework.maintenanceDate 
+      ? new Date(formData.details.framework.maintenanceDate).getTime()
+      : null,
+    etat: formData.details.framework.condition
+  },
         pieces: formData.details.rooms.map(room => ({
           nom: room.name,
           type: room.type,
