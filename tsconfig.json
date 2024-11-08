@@ -30,6 +30,6 @@
     "esm": true,
     "experimentalSpecifierResolution": "node"
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "scripts/migrate.mts"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "scripts/migrate.mts", "app/api/expertises/[id]/pdf/route.ts"],
   "exclude": ["node_modules"]
 }
