@@ -6,8 +6,11 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';
+import * as dotenv from 'dotenv';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXT_PUBLIC_JWT_SECRET;
+dotenv.config({ path: '.env' });
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const PUBLIC_DIR = join(process.cwd(), 'public');
 const UPLOAD_DIR = join(PUBLIC_DIR, 'uploads');
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
