@@ -17,6 +17,8 @@ import {
   Flex,
 } from '@chakra-ui/react';
 import { useAuth } from '../lib/auth';
+import PhoneInput from 'react-phone-input-2';
+import 'react-phone-input-2/lib/style.css';
 
 interface FormData {
   details: {
@@ -283,14 +285,31 @@ export default function NewPdaForm() {
         </FormControl>
 
         <FormControl isRequired>
-          <FormLabel>Téléphone du bénéficiaire</FormLabel>
-          <Input 
-            name="details.beneficiary.phone" 
-            value={formData.details.beneficiary.phone} 
-            onChange={handleChange} 
-            type="tel" 
-          />
-        </FormControl>
+  <FormLabel>Téléphone du bénéficiaire</FormLabel>
+  <PhoneInput
+    country={'fr'}
+    value={formData.details.beneficiary.phone}
+    onChange={(phone) => {
+      setFormData(prev => ({
+        ...prev,
+        details: {
+          ...prev.details,
+          beneficiary: {
+            ...prev.details.beneficiary,
+            phone: phone
+          }
+        }
+      }));
+    }}
+    inputStyle={{ width: "100%" }}
+    buttonStyle={{ borderRadius: '0.375rem 0 0 0.375rem' }}
+    specialLabel=""
+    enableSearch={true}
+    searchPlaceholder="Rechercher un pays..."
+    searchNotFound="Pays non trouvé"
+    preferredCountries={['fr', 'be', 'ch', 'lu']}
+  />
+</FormControl>
 
         <FormControl isRequired>
           <FormLabel>Revenu fiscal de référence</FormLabel>

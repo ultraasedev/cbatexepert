@@ -1,6 +1,6 @@
-// app/dashboard/page.tsx
+            // page.tsx
 'use client';
-
+import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
 import {
   Box,
@@ -31,18 +31,15 @@ import {
   Button,
   Icon,
   Portal,
+  useToast
 } from '@chakra-ui/react';
 import {
   MdAssignment,
   MdShowChart,
   MdPeople,
-  MdDoneAll,
-  MdPending,
-  MdMoreVert,
   MdAdd,
-  MdFileDownload,
-  MdCalendarToday,
-  MdFilterList
+  MdFilterList,
+  MdMoreVert
 } from 'react-icons/md';
 import Sidebar from '../components/Sidebar';
 import { useAuth } from '../lib/auth';
@@ -63,8 +60,25 @@ import {
 interface DashboardStats {
   totalPdas: number;
   totalExpertises: number;
-  completedPdas: number;
-  pendingPdas: number;
+  monthlyData: {
+    name: string;
+    value: number;
+  }[];
+  workTypeData: {
+    name: string;
+    value: number;
+  }[];
+  recentFiles: FileData[];
+}
+
+interface FileData {
+  id: string;
+  type: 'pda' | 'expertise';
+  title: string;
+  status: string;
+  createdAt: string;
+  createdBy?: string;
+  createdByName?: string;
 }
 
 interface StatCardProps {
@@ -72,38 +86,18 @@ interface StatCardProps {
   value: number;
   icon: any;
   increase?: number;
-  progress?: number;
-  badge?: { text: string; color: string };
   color: string;
 }
 
-// Données fictives
-const MOCK_DATA = {
-  monthlyData: [
-    { name: 'Jan', value: 12 },
-    { name: 'Fév', value: 15 },
-    { name: 'Mar', value: 18 },
-    { name: 'Avr', value: 14 },
-    { name: 'Mai', value: 20 },
-    { name: 'Juin', value: 22 },
-  ],
-  pieData: [
-    { name: 'Isolation', value: 45 },
-    { name: 'Chauffage', value: 30 },
-    { name: 'Ventilation', value: 15 },
-    { name: 'Énergie', value: 10 },
-  ],
-  colors: ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']
-};
+// Couleurs pour le graphique en camembert
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
-// Composant de carte statistique
+// Composant StatCard
 const StatCard: React.FC<StatCardProps> = ({
   label,
   value,
   icon: IconComponent,
   increase,
-  progress,
-  badge,
   color
 }) => {
   return (
@@ -130,78 +124,173 @@ const StatCard: React.FC<StatCardProps> = ({
           >
             {value.toLocaleString()}
           </StatNumber>
-          <StatHelpText 
-            fontSize={{ base: '10px', sm: '12px' }}
-            mt={1}
-          >
-            {increase && (
+          {increase && (
+            <StatHelpText fontSize={{ base: '10px', sm: '12px' }} mt={1}>
               <HStack spacing={1}>
                 <StatArrow type="increase" />
                 <Text>{increase}% ce mois</Text>
               </HStack>
-            )}
-            {progress && (
-              <Progress
-                value={progress}
-                size="xs"
-                colorScheme="green"
-                mt={1}
-              />
-            )}
-            {badge && (
-              <Badge
-                colorScheme={badge.color}
-                fontSize={{ base: '9px', sm: '11px' }}
-                mt={1}
-                px={1.5}
-                py={0.5}
-              >
-                {badge.text}
-              </Badge>
-            )}
-          </StatHelpText>
+            </StatHelpText>
+          )}
         </Stat>
       </CardBody>
     </Card>
   );
 };
 
-// Composant principal
+// Composant principal Dashboard
 export default function Dashboard() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, getAuthHeaders } = useAuth();
+  const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalPdas: 0,
     totalExpertises: 0,
-    completedPdas: 0,
-    pendingPdas: 0,
+    monthlyData: [],
+    workTypeData: [],
+    recentFiles: []
   });
-  const [loading, setLoading] = useState(true);
+  const toast = useToast();
 
-  // Breakpoints responsifs
   const isMobile = useBreakpointValue({ base: true, md: false });
-  const chartHeight = useBreakpointValue({ 
-    base: '180px', 
-    sm: '220px', 
-    md: '300px' 
-  });
+  const chartHeight = useBreakpointValue({ base: '180px', sm: '220px', md: '300px' });
 
-  // Chargement des données
-  useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setStats({
-          totalPdas: 87,
-          totalExpertises: 124,
-          completedPdas: 65,
-          pendingPdas: 22,
-        });
-      } finally {
-        setLoading(false);
-      }
+  // Calcul des données mensuelles
+  const calculateMonthlyData = (pdas: any[], expertises: any[]) => {
+    const last6Months = Array.from({length: 6}, (_, i) => {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      return {
+        name: date.toLocaleDateString('fr-FR', { month: 'short' }),
+        date: date
+      };
+    }).reverse();
+
+    return last6Months.map(month => ({
+      name: month.name,
+      value: pdas.filter(pda => 
+        new Date(pda.createdAt).getMonth() === month.date.getMonth()
+      ).length + expertises.filter(exp => 
+        new Date(exp.createdAt).getMonth() === month.date.getMonth()
+      ).length
+    }));
+  };
+
+  // Calcul de la répartition des travaux
+  const calculateWorkTypeDistribution = (expertises: any[]) => {
+    const typeCount: Record<string, number> = {
+      'Isolation': 0,
+      'Chauffage': 0,
+      'Ventilation': 0,
+      'Énergie': 0,
+      'Autres': 0
     };
 
-    if (user) loadDashboardData();
+    expertises.forEach(expertise => {
+      switch(expertise.details?.typeOfImprovement) {
+        case 'isolation':
+          typeCount['Isolation']++;
+          break;
+        case 'chauffage':
+          typeCount['Chauffage']++;
+          break;
+        case 'ventilation':
+          typeCount['Ventilation']++;
+          break;
+        case 'energie_renouvelable':
+          typeCount['Énergie']++;
+          break;
+        default:
+          typeCount['Autres']++;
+      }
+    });
+
+    return Object.entries(typeCount)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }));
+  };
+
+  // Récupération des derniers fichiers
+  const getRecentFiles = (pdas: any[], expertises: any[], isAdmin: boolean): FileData[] => {
+    const allFiles = [
+      ...pdas.map(pda => ({
+        id: pda._id,
+        type: 'pda' as const,
+        title: pda.title,
+        status: pda.status,
+        createdAt: pda.createdAt,
+        createdBy: pda.createdBy,
+        createdByName: pda.createdByName
+      })),
+      ...expertises.map(exp => ({
+        id: exp._id,
+        type: 'expertise' as const,
+        title: `Expertise ${exp.typeLogement} - ${exp.beneficiaire.nom}`,
+        status: exp.status,
+        createdAt: exp.createdAt,
+        createdBy: exp.createdBy,
+        createdByName: exp.createdByName
+      }))
+    ];
+
+    return allFiles
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 3);
+  };
+
+  // Chargement des données
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+
+      const headers = getAuthHeaders();
+
+      // Chargement des PDAs
+      const pdasResponse = await fetch('/api/pda', { headers });
+      const pdasData = await pdasResponse.json();
+
+      // Chargement des Expertises
+      const expertisesResponse = await fetch('/api/expertises', { headers });
+      const expertisesData = await expertisesResponse.json();
+
+      const pdas = pdasData.data || [];
+      const expertises = expertisesData.data || [];
+
+      // Filtrage selon le rôle
+      let filteredPdas = pdas;
+      let filteredExpertises = expertises;
+
+      if (user?.role !== 'admin') {
+        filteredPdas = pdas.filter((pda: any) => pda.createdBy === user?.id);
+        filteredExpertises = expertises.filter((exp: any) => exp.createdBy === user?.id);
+      }
+
+      setStats({
+        totalPdas: filteredPdas.length,
+        totalExpertises: filteredExpertises.length,
+        monthlyData: calculateMonthlyData(filteredPdas, filteredExpertises),
+        workTypeData: calculateWorkTypeDistribution(filteredExpertises),
+        recentFiles: getRecentFiles(filteredPdas, filteredExpertises, user?.role === 'admin')
+      });
+
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données du tableau de bord",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadDashboardData();
+    }
   }, [user]);
 
   const formattedDate = useMemo(() => {
@@ -263,6 +352,7 @@ export default function Dashboard() {
               </Text>
             </Box>
 
+            {/* Actions rapides mobile */}
             {isMobile && (
               <HStack spacing={2} w="100%">
                 <Button
@@ -286,38 +376,9 @@ export default function Dashboard() {
             )}
           </Flex>
 
-          {/* Filtres rapides mobile */}
-          {isMobile && (
-            <Box
-              overflowX="auto"
-              py={1}
-              mx={-2}
-              css={{
-                '&::-webkit-scrollbar': { display: 'none' },
-                scrollbarWidth: 'none'
-              }}
-            >
-              <HStack spacing={2} px={2}>
-                {['Jour', 'Semaine', 'Mois'].map((period) => (
-                  <Button
-                    key={period}
-                    size="xs"
-                    variant="outline"
-                    fontSize="11px"
-                    h="28px"
-                    minW="auto"
-                    px={3}
-                  >
-                    {period}
-                  </Button>
-                ))}
-              </HStack>
-            </Box>
-          )}
-
           {/* Cartes statistiques */}
           <SimpleGrid
-            columns={{ base: 2, lg: 4 }}
+            columns={{ base: 2, lg: 2 }}
             spacing={{ base: 2, sm: 3, md: 4 }}
             minChildWidth={{ base: '140px', sm: '160px' }}
           >
@@ -325,29 +386,13 @@ export default function Dashboard() {
               label="Plans d'aide"
               value={stats.totalPdas}
               icon={MdShowChart}
-              increase={23}
               color="blue.500"
             />
             <StatCard
               label="Expertises"
               value={stats.totalExpertises}
               icon={MdPeople}
-              increase={15}
               color="green.500"
-            />
-            <StatCard
-              label="PDAs complétés"
-              value={stats.completedPdas}
-              icon={MdDoneAll}
-              progress={(stats.completedPdas / stats.totalPdas) * 100}
-              color="purple.500"
-            />
-            <StatCard
-              label="En attente"
-              value={stats.pendingPdas}
-              icon={MdPending}
-              badge={{ text: "À traiter", color: "orange" }}
-              color="orange.500"
             />
           </SimpleGrid>
 
@@ -359,10 +404,7 @@ export default function Dashboard() {
             {/* Graphique linéaire */}
             <Card>
               <CardHeader p={{ base: 2, sm: 3 }}>
-                <Text
-                  fontSize={{ base: '13px', sm: '15px' }}
-                  fontWeight="semibold"
-                >
+                <Text fontSize={{ base: '13px', sm: '15px' }} fontWeight="semibold">
                   Évolution des dossiers
                 </Text>
               </CardHeader>
@@ -370,31 +412,17 @@ export default function Dashboard() {
                 <Box h={chartHeight}>
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart
-                      data={MOCK_DATA.monthlyData}
-                      margin={{
-                        top: 5,
-                        right: 5,
-                        left: -15,
-                        bottom: 5
-                      }}
+                      data={stats.monthlyData}
+                      margin={{ top: 5, right: 5, left: -15, bottom: 5 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis
-                        dataKey="name"
-                        tick={{ fontSize: 10 }}
-                        interval={0}
-                      />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        width={25}
-                      />
-                      <Tooltip
-                        contentStyle={{ fontSize: '11px' }}
-                      />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} interval={0} />
+                      <YAxis tick={{ fontSize: 10 }} width={25} />
+                      <Tooltip contentStyle={{ fontSize: '11px' }} />
                       <Line
                         type="monotone"
                         dataKey="value"
-                        stroke="#000091"
+                        stroke="#0088FE"
                         strokeWidth={2}
                       />
                     </LineChart>
@@ -406,10 +434,7 @@ export default function Dashboard() {
             {/* Graphique circulaire */}
             <Card>
               <CardHeader p={{ base: 2, sm: 3 }}>
-                <Text
-                  fontSize={{ base: '13px', sm: '15px' }}
-                  fontWeight="semibold"
-                >
+                <Text fontSize={{ base: '13px', sm: '15px' }} fontWeight="semibold">
                   Répartition des travaux
                 </Text>
               </CardHeader>
@@ -418,7 +443,7 @@ export default function Dashboard() {
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={MOCK_DATA.pieData}
+                        data={stats.workTypeData}
                         cx="50%"
                         cy="50%"
                         innerRadius={30}
@@ -427,155 +452,162 @@ export default function Dashboard() {
                         dataKey="value"
                         label={!isMobile}
                       >
-                        {MOCK_DATA.pieData.map((_, index) => (
+                        {stats.workTypeData.map((_, index) => (
                           <Cell
                             key={`cell-${index}`}
-                            fill={MOCK_DATA.colors[index % MOCK_DATA.colors.length]}
+                            fill={COLORS[index % COLORS.length]}
                           />
                         ))}
                       </Pie>
-                      <Tooltip
-                        contentStyle={{ fontSize: '11px' }}
-                      />
+                      <Tooltip contentStyle={{ fontSize: '11px' }} />
                     </PieChart>
                   </ResponsiveContainer>
                 </Box>
               </CardBody>
             </Card>
           </SimpleGrid>
-
-          {/* Liste des dossiers récents */}
-          <Card>
-            <CardHeader p={{ base: 2, sm: 3 }}>
-              <Text
-                fontSize={{ base: '13px', sm: '15px' }}
-                fontWeight="semibold"
-              >
-                Derniers dossiers
-              </Text>
-            </CardHeader>
-            <CardBody p={{ base: 2, sm: 3 }}>
-              <VStack spacing={{ base: 2, sm: 3 }} align="stretch">
-                {[...Array(3)].map((_, i) => (
-                  <Box
-                    key={i}
-                    p={{ base: 2, sm: 3 }}
-                    bg="gray.50"
-                    borderRadius="md"
-                    _hover={{ bg: 'gray.100' }}
-                    cursor="pointer"
+         {/* Liste des derniers dossiers */}
+<Card>
+  <CardHeader p={{ base: 2, sm: 3 }}>
+    <Text fontSize={{ base: '13px', sm: '15px' }} fontWeight="semibold">
+      Derniers dossiers
+    </Text>
+  </CardHeader>
+  <CardBody p={{ base: 2, sm: 3 }}>
+    <VStack spacing={{ base: 2, sm: 3 }} align="stretch">
+      {stats.recentFiles.length === 0 ? (
+        <Box
+          p={4}
+          textAlign="center"
+          color="gray.500"
+          fontSize="sm"
+        >
+          Aucun dossier récent
+        </Box>
+      ) : (
+        stats.recentFiles.map((file) => (
+          <Box
+            key={file.id}
+            p={{ base: 2, sm: 3 }}
+            bg="gray.50"
+            borderRadius="md"
+            _hover={{ bg: 'gray.100' }}
+            cursor="pointer"
+          >
+            <Flex
+              direction={{ base: 'column', sm: 'row' }}
+              justify="space-between"
+              align={{ base: 'flex-start', sm: 'center' }}
+              gap={{ base: 1, sm: 0 }}
+            >
+              <HStack spacing={2}>
+                <Icon
+                  as={file.type === 'pda' ? MdAssignment : MdPeople}
+                  boxSize={{ base: '16px', sm: '20px' }}
+                  color={file.type === 'pda' ? 'blue.500' : 'green.500'}
+                />
+                <Box>
+                  <Text
+                    fontSize={{ base: '12px', sm: '14px' }}
+                    fontWeight="medium"
                   >
-                    <Flex
-                      direction={{ base: 'column', sm: 'row' }}
-                      justify="space-between"
-                      align={{ base: 'flex-start', sm: 'center' }}
-                      gap={{ base: 1, sm: 0 }}
-                    >
-                      <HStack spacing={2}>
-                        <Icon
-                          as={MdAssignment}
-                          boxSize={{ base: '16px', sm: '20px' }}
-                          color="blue.500"
-                        />
-                        <Box>
-                          <Text
-                            fontSize={{ base: '12px', sm: '14px' }}
-                            fontWeight="medium"
-                          >
-                            Dossier #{2023 + i}
-                          </Text>
-                          <Text
-                            fontSize={{ base: '10px', sm: '12px' }}
-                            color="gray.500"
-                          >
-                            {new Date().toLocaleDateString('fr-FR')}
-                          </Text>
-                        </Box>
-                      </HStack>
-                       <Badge
-                        colorScheme={i === 0 ? "green" : i === 1 ? "orange" : "blue"}
-                        fontSize={{ base: '9px', sm: '11px' }}
-                        px={1.5}
-                        py={0.5}
-                        textTransform="none"
-                        borderRadius="full"
-                      >
-                        {i === 0 ? "Terminé" : i === 1 ? "En attente" : "En cours"}
-                      </Badge>
-                    </Flex>
-                  </Box>
-                ))}
-              </VStack>
-
-              {/* Bouton "Voir plus" */}
-              <Button
-                variant="ghost"
-                size="sm"
-                width="full"
-                mt={{ base: 2, sm: 3 }}
-                fontSize={{ base: '11px', sm: '13px' }}
-                height={{ base: '32px', sm: '36px' }}
-              >
-                Voir tous les dossiers
-              </Button>
-            </CardBody>
-          </Card>
-
-          {/* Menu flottant mobile pour les actions rapides */}
-          {isMobile && (
-            <Portal>
-              <Box
-                position="fixed"
-                bottom={4}
-                right={4}
-                zIndex={1000}
-              >
-                <Menu>
-                  <MenuButton
-                    as={IconButton}
-                    aria-label="Actions rapides"
-                    icon={<MdAdd />}
-                    colorScheme="blue"
-                    borderRadius="full"
-                    size="lg"
-                    shadow="lg"
-                    _hover={{
-                      transform: 'scale(1.05)',
-                    }}
-                    _active={{
-                      transform: 'scale(0.95)',
-                    }}
-                  />
-                  <MenuList
-                    fontSize="13px"
-                    p={1}
+                    {file.title}
+                    {user?.role === 'admin' && file.createdByName && (
+                      <Text as="span" fontSize="xs" color="gray.500" ml={2}>
+                        par {file.createdByName}
+                      </Text>
+                    )}
+                  </Text>
+                  <Text
+                    fontSize={{ base: '10px', sm: '12px' }}
+                    color="gray.500"
                   >
-                    <MenuItem 
-                      icon={<Icon as={MdAssignment} boxSize="16px" />}
-                      py={2}
-                    >
-                      Nouvelle expertise
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<Icon as={MdAdd} boxSize="16px" />}
-                      py={2}
-                    >
-                      Nouveau PDA
-                    </MenuItem>
-                    <MenuItem 
-                      icon={<Icon as={MdFileDownload} boxSize="16px" />}
-                      py={2}
-                    >
-                      Exporter les données
-                    </MenuItem>
-                  </MenuList>
-                </Menu>
-              </Box>
-            </Portal>
-          )}
+                    {new Date(file.createdAt).toLocaleDateString('fr-FR')}
+                  </Text>
+                </Box>
+              </HStack>
+              <Badge
+                colorScheme={file.status === 'Terminé' ? "green" : "orange"}
+                fontSize={{ base: '9px', sm: '11px' }}
+                px={1.5}
+                py={0.5}
+                textTransform="none"
+                borderRadius="full"
+              >
+                {file.status}
+              </Badge>
+            </Flex>
+          </Box>
+        ))
+      )}
+
+      <Button
+        variant="ghost"
+        size="sm"
+        width="full"
+        mt={{ base: 2, sm: 3 }}
+        fontSize={{ base: '11px', sm: '13px' }}
+        height={{ base: '32px', sm: '36px' }}
+        onClick={() => {
+          router.push('/dossiers');
+        }}
+      >
+        Voir tous les dossiers
+      </Button>
+    </VStack>
+  </CardBody>
+</Card>
+
+{/* Menu flottant mobile pour les actions rapides */}
+{isMobile && (
+  <Portal>
+    <Box
+      position="fixed"
+      bottom={4}
+      right={4}
+      zIndex={1000}
+    >
+      <Menu>
+        <MenuButton
+          as={IconButton}
+          aria-label="Actions rapides"
+          icon={<MdAdd />}
+          colorScheme="blue"
+          borderRadius="full"
+          size="lg"
+          shadow="lg"
+          _hover={{
+            transform: 'scale(1.05)',
+          }}
+          _active={{
+            transform: 'scale(0.95)',
+          }}
+        />
+        <MenuList
+          fontSize="13px"
+          p={1}
+        >
+          <MenuItem 
+            icon={<Icon as={MdAssignment} boxSize="16px" />}
+            py={2}
+            onClick={() => router.push('/expertises/new')}
+          >
+            Nouvelle expertise
+          </MenuItem>
+          <MenuItem 
+            icon={<Icon as={MdAdd} boxSize="16px" />}
+            py={2}
+            onClick={() => router.push('/pda/new')}
+          >
+            Nouveau PDA
+          </MenuItem>
+        </MenuList>
+      </Menu>
+    </Box>
+  </Portal>
+)}
         </VStack>
       </Box>
     </Box>
   );
 }
-                  

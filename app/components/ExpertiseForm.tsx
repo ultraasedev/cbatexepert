@@ -1114,191 +1114,241 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
       errors,
     };
   };
-  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-    e.preventDefault();
-    if (!user) {
-      router.push("/login");
-      return;
+
+const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+  e.preventDefault();
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    calculateNewScore();
+
+    const validation = validateExpertiseData(formData);
+    if (!validation.isValid) {
+      throw new Error(`Validation échouée: ${validation.errors.join(", ")}`);
     }
 
-    setLoading(true);
-    try {
-      calculateNewScore();
+    // Construction des données pour l'API
+    // Dans la fonction handleSubmit du ExpertiseForm.tsx
 
-      const validation = validateExpertiseData(formData);
-      if (!validation.isValid) {
-        throw new Error(`Validation échouée: ${validation.errors.join(", ")}`);
-      }
+const expertiseData = {
+  // Informations de base
+  typeLogement: formData.typeLogement,
 
-      // Helper pour convertir les dates en timestamps
-      const dateToTimestamp = (dateString: string): number => {
-        return new Date(dateString).getTime();
-      };
-
-      // Construction des données pour l'API
-      const expertiseData = {
-        typeLogement: formData.typeLogement,
-        beneficiaire: {
-          nom: `${formData.details.beneficiary.firstName} ${formData.details.beneficiary.lastName}`,
-          adresse: formData.details.beneficiary.address,
-          telephone: formData.details.beneficiary.phone
-        },
-        details: {
-          anneeConstruction: Number(formData.details.construction.year),
-          superficie: Number(formData.details.construction.area),
-          nombreEtages: Number(formData.details.construction.floors)
-        },
-        // Ajout des champs requis manquants
-        ouvertures: {
-          nombre: formData.details.rooms[0]?.windows?.count || 0,
-          typeVitrage: formData.details.rooms[0]?.windows?.type || 'simple',
-          etat: formData.details.rooms[0]?.windows?.condition || 'Moyen',
-          anneeInstallation: formData.details.rooms[0]?.windows?.installationYear || new Date().getFullYear()
-        },
-        humidite: {
-          taux: 0, // Valeur par défaut
-          etat: "Moyen", // Valeur par défaut
-        },
-        isolation: {
-          combles: {
-            ...formData.details.isolation.combles,
-            etat: formData.details.isolation.combles.condition || 'Moyen',
-            etatCombles: formData.details.isolation.combles.etatCombles || 'Moyen',
-            tauxHumiditeCombles: formData.details.isolation.combles.humidityRate || 0,
-            presenceCondensation: formData.details.isolation.combles.hasCondensation || false
-          },
-          murs: {
-            ...formData.details.isolation.murs,
-            etat: formData.details.isolation.murs.condition || 'Moyen'
-          }
-        },
-        toiture: {
-          type: formData.details.roof.type,           // Changement de roof à toiture
-    typeFaitage: formData.details.roof.ridgeType,
-    dateEntretien: new Date(formData.details.roof.maintenanceDate).getTime(),
-    typeEntretien: formData.details.roof.maintenanceType || '',
-    presenceImpuretes: formData.details.roof.hasImpurities,
-    annee: formData.details.roof.installationYear || new Date().getFullYear(),
-    etat: formData.details.roof.condition
-        },
-
-  charpente: {
-    type: formData.details.framework.type,         // Changement de framework à charpente
-    presenceArtive: formData.details.framework.hasBeam,
-    entretienEffectue: formData.details.framework.hadMaintenance,
-    dateEntretien: formData.details.framework.maintenanceDate 
-      ? new Date(formData.details.framework.maintenanceDate).getTime()
-      : null,
-    etat: formData.details.framework.condition
+  // Informations du bénéficiaire
+  beneficiaire: {
+    nom: `${formData.details.beneficiary.firstName} ${formData.details.beneficiary.lastName}`,
+    adresse: formData.details.beneficiary.address,
+    telephone: formData.details.beneficiary.phone
   },
-        pieces: formData.details.rooms.map(room => ({
-          nom: room.name,
-          type: room.type,
-          etage: room.floor,
-          ouvertures: {
-            nombre: room.windows.count,
-            typeVitrage: room.windows.type,
-            etat: room.condition.windows,
-            anneeInstallation: room.windows.installationYear
-          },
-          humidite: {
-            taux: room.humidity,
-            etat: room.condition.humidity
-          }
-        })),
-        chauffage: {
-          types: formData.details.chauffage.types,
-          nombreRadiateurs: formData.details.chauffage.nombreRadiateurs,
-          localisations: formData.details.chauffage.localisations,
-          etat: formData.details.chauffage.condition,
-          anneeInstallation: formData.details.chauffage.installationYear
-        },
-        facade: {
-          type: formData.details.facades[0].type,
-          epaisseurMurs: Number(formData.details.facades[0].thickness),
-          dernierEntretien: new Date(formData.details.facades[0].lastMaintenance).getTime(),
-          etat: formData.details.facades[0].condition
-        },
-        tableauElectrique: {
-          type: formData.details.electrical.type,
-          anneePose: Number(formData.details.electrical.installationYear),
-          presenceLinky: formData.details.electrical.hasLinky,
-          auxNormes: formData.details.electrical.upToStandards,
-          etat: formData.details.electrical.condition
-        },
-        ventilation: {
-          types: formData.details.ventilation.types,
-          localisations: formData.details.ventilation.localisations,
-          ventilationNaturelle: true,
-          anneePose: formData.details.ventilation.installationYear,
-          etat: formData.details.ventilation.condition
-        },
-        evaluations: {
-          rooms: formData.evaluations.rooms,
-          global: {
-            score: evaluationScore,
-            condition: formData.evaluations.global.condition,
-            comment: formData.evaluations.global.comment
-          }
-        },
-        securiteIncendie: {
-          bouleIncendie: formData.details.securiteIncendie.bouleIncendie,
-          extincteur: formData.details.securiteIncendie.extincteur,
-          detecteurFumee: formData.details.securiteIncendie.detecteurFumee
-        },
-        status: 'En cours' as ExpertiseStatus
-      };
 
-      const headers = getAuthHeaders();
-      const response = await fetch(
-        isEditing && initialData?._id
-          ? `/api/expertises/${initialData._id}`
-          : "/api/expertises",
-        {
-          method: isEditing ? "PUT" : "POST",
-          headers: {
-            ...headers,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(expertiseData),
-        }
-      );
+  // Détails généraux
+  details: {
+    anneeConstruction: Number(formData.details.construction.year),
+    superficie: Number(formData.details.construction.area),
+    nombreEtages: Number(formData.details.construction.floors)
+  },
 
-      if (!response.ok) {
-        throw new Error(
-          isEditing
-            ? "Erreur lors de la mise à jour"
-            : "Erreur lors de la création"
-        );
-      }
+  // Ouvertures
+  ouvertures: {
+    nombre: formData.details.rooms[0]?.windows?.count || 0,
+    typeVitrage: formData.details.rooms[0]?.windows?.type || 'simple',
+    etat: formData.details.rooms[0]?.windows?.condition || 'Moyen',
+    anneeInstallation: formData.details.rooms[0]?.windows?.installationYear || new Date().getFullYear()
+  },
 
-      if (onSubmit) {
-        await onSubmit(formData);
-      }
+  // Chauffage
+  chauffage: {
+    types: formData.details.chauffage.types || [],
+    nombreRadiateurs: formData.details.chauffage.nombreRadiateurs || 0,
+    localisations: formData.details.chauffage.localisations || [],
+    etat: formData.details.chauffage.condition || 'Moyen',
+    anneeInstallation: formData.details.chauffage.installationYear || new Date().getFullYear()
+  },
 
-      toast({
-        title: "Succès",
-        description: `L'expertise a été ${
-          isEditing ? "modifiée" : "créée"
-        } avec succès`,
-        status: "success",
-        duration: 3000,
-      });
+  // Humidité
+  humidite: {
+    taux: 0,
+    etat: formData.details.humidite?.condition || 'Moyen',
+    tauxParPiece: formData.details.humidite?.tauxParPiece || {}
+  },
 
-      router.push("/expertises");
-    } catch (error) {
-      console.error("Erreur:", error);
-      toast({
-        title: "Erreur",
-        description:
-          error instanceof Error ? error.message : "Une erreur est survenue",
-        status: "error",
-        duration: 3000,
-      });
-    } finally {
-      setLoading(false);
+  // Façade
+  facade: {
+    type: formData.details.facades[0]?.type || 'Enduit',
+    epaisseurMurs: Number(formData.details.facades[0]?.thickness) || 0,
+    dernierEntretien: formData.details.facades[0]?.lastMaintenance 
+      ? new Date(formData.details.facades[0].lastMaintenance).getTime()
+      : new Date().getTime(),
+    etat: formData.details.facades[0]?.condition || 'Moyen'
+  },
+
+  // Tableau électrique
+  tableauElectrique: {
+    type: formData.details.electrical.type || 'Mono',
+    anneePose: Number(formData.details.electrical.installationYear) || new Date().getFullYear(),
+    presenceLinky: formData.details.electrical.hasLinky || false,
+    auxNormes: formData.details.electrical.upToStandards || false,
+    etat: formData.details.electrical.condition || 'Moyen'
+  },
+
+  // Ventilation
+  ventilation: {
+    types: formData.details.ventilation.types || [],
+    localisations: formData.details.ventilation.localisations || [],
+    ventilationNaturelle: true,
+    anneePose: formData.details.ventilation.installationYear || new Date().getFullYear(),
+    etat: formData.details.ventilation.condition || 'Moyen'
+  },
+
+  // Isolation
+  isolation: {
+    combles: {
+      presence: formData.details.isolation.combles?.presence || false,
+      type: formData.details.isolation.combles?.type || '',
+      pose: formData.details.isolation.combles?.pose || 'En rouleau',
+      epaisseur: formData.details.isolation.combles?.epaisseur || 0,
+      etat: formData.details.isolation.combles?.condition || 'Moyen',
+      presenceCondensation: formData.details.isolation.combles?.hasCondensation || false,
+      zonesCondensation: formData.details.isolation.combles?.condensationLocations || [],
+      tauxHumidite: formData.details.isolation.combles?.humidityRate || 0,
+      etatCombles: formData.details.isolation.combles?.etatCombles || 'Moyen'
+    },
+    murs: {
+      presence: formData.details.isolation.murs?.presence || false,
+      type: formData.details.isolation.murs?.type || '',
+      pose: formData.details.isolation.murs?.pose || 'En rouleau',
+      epaisseur: formData.details.isolation.murs?.epaisseur || 0,
+      etat: formData.details.isolation.murs?.condition || 'Moyen'
+    },
+    sols: formData.details.isolation.sols ? {
+      presence: formData.details.isolation.sols.presence || false,
+      type: formData.details.isolation.sols.type || '',
+      pose: formData.details.isolation.sols.pose || 'En rouleau',
+      epaisseur: formData.details.isolation.sols.epaisseur || 0,
+      etat: formData.details.isolation.sols.condition || 'Moyen'
+    } : undefined
+  },
+
+  // Charpente
+  charpente: {
+    type: formData.details.framework.type || 'Fermette',
+    presenceArtive: formData.details.framework.hasBeam || false,
+    entretienEffectue: formData.details.framework.hadMaintenance || false,
+    dateEntretien: formData.details.framework.maintenanceDate 
+      ? new Date(formData.details.framework.maintenanceDate).toISOString()
+      : null,
+    etat: formData.details.framework.condition || 'Moyen'
+  },
+
+  // Toiture
+  toiture: {
+    type: formData.details.roof.type || 'Ardoise Naturelle',
+    typeFaitage: formData.details.roof.ridgeType || 'Cimente',
+    dateEntretien: formData.details.roof.maintenanceDate
+      ? new Date(formData.details.roof.maintenanceDate).toISOString()
+      : new Date().toISOString(),
+    typeEntretien: formData.details.roof.maintenanceType || '',
+    presenceImpuretes: formData.details.roof.hasImpurities || false,
+    annee: formData.details.roof.installationYear || new Date().getFullYear(),
+    etat: formData.details.roof.condition || 'Moyen'
+  },
+
+  // Impuretés
+  impuretes: {
+    condition: formData.details.impuretes?.condition || 'Moyen'
+  },
+
+  // Sécurité incendie (champs requis)
+  securiteIncendie: {
+    bouleIncendie: formData.details.securiteIncendie?.bouleIncendie || false,
+    extincteur: formData.details.securiteIncendie?.extincteur || false,
+    detecteurFumee: formData.details.securiteIncendie?.detecteurFumee || false
+  },
+
+  // Pièces
+  pieces: formData.details.rooms.map(room => ({
+    nom: room.name || '',
+    type: room.type || '',
+    etage: room.floor || 0,
+    ouvertures: {
+      nombre: room.windows?.count || 0,
+      typeVitrage: room.windows?.type || 'simple',
+      etat: room.condition?.windows || 'Moyen',
+      anneeInstallation: room.windows?.installationYear || new Date().getFullYear()
+    },
+    humidite: {
+      taux: room.humidity || 0,
+      etat: room.humidityCondition || 'Moyen'
     }
-  };
+  })),
+
+  // Évaluations
+  evaluations: {
+    rooms: formData.evaluations?.rooms || {},
+    global: {
+      score: evaluationScore || 0,
+      condition: formData.evaluations?.global?.condition || 'Correct',
+      comment: formData.evaluations?.global?.comment || ''
+    }
+  },
+
+  // Statut
+  status: 'En cours' as ExpertiseStatus
+};
+    const headers = getAuthHeaders();
+    const response = await fetch(
+      isEditing && initialData?._id
+        ? `/api/expertises/${initialData._id}`
+        : "/api/expertises",
+      {
+        method: isEditing ? "PUT" : "POST",
+        headers: {
+          ...headers,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(expertiseData),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        isEditing
+          ? "Erreur lors de la mise à jour"
+          : "Erreur lors de la création"
+      );
+    }
+
+    if (onSubmit) {
+      await onSubmit(formData);
+    }
+
+    toast({
+      title: "Succès",
+      description: `L'expertise a été ${
+        isEditing ? "modifiée" : "créée"
+      } avec succès`,
+      status: "success",
+      duration: 3000,
+    });
+
+    router.push("/expertises");
+  } catch (error) {
+    console.error("Erreur:", error);
+    toast({
+      title: "Erreur",
+      description:
+        error instanceof Error ? error.message : "Une erreur est survenue",
+      status: "error",
+      duration: 3000,
+    });
+  } finally {
+    setLoading(false);
+  }
+};
 
   const renderStep = () => {
     switch (currentStep) {

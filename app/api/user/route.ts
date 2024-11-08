@@ -233,6 +233,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   const user = authenticateToken(request);
+  
   if (!user) {
     return NextResponse.json(
       { success: false, message: 'Non autorisé' },
@@ -242,12 +243,83 @@ export async function PUT(request: NextRequest) {
 
   try {
     await dbConnect();
-    const formData = await request.formData();
-    const action = formData.get('action') as string;
+    const data = await request.json();
 
-    switch (action) {
+    if (!data.action) {
+      return NextResponse.json(
+        { success: false, message: 'Action non spécifiée' },
+        { status: 400 }
+      );
+    }
+
+    switch (data.action) {
+      case 'updateUser': {
+        if (user.role !== 'admin') {
+          return NextResponse.json(
+            { success: false, message: 'Non autorisé' },
+            { status: 401 }
+          );
+        }
+
+        const { id, name, email, role, password } = data;
+        if (!id || !name || !email || !role) {
+          return NextResponse.json(
+            { success: false, message: 'Données manquantes' },
+            { status: 400 }
+          );
+        }
+
+        // Utiliser le champ 'id' au lieu de '_id'
+        const userToUpdate = await User.findOne({ id: id });
+        
+        if (!userToUpdate) {
+          return NextResponse.json(
+            { success: false, message: 'Utilisateur non trouvé' },
+            { status: 404 }
+          );
+        }
+
+        // Vérification si l'email est déjà utilisé par un autre utilisateur
+        const existingUser = await User.findOne({
+          email,
+          id: { $ne: id } // Utiliser 'id' au lieu de '_id'
+        });
+
+        if (existingUser) {
+          return NextResponse.json(
+            { success: false, message: 'Cet email est déjà utilisé' },
+            { status: 400 }
+          );
+        }
+
+        // Mise à jour des champs
+        userToUpdate.name = name;
+        userToUpdate.email = email;
+        userToUpdate.role = role;
+
+        // Mise à jour du mot de passe si fourni
+        if (password) {
+          const salt = await bcrypt.genSalt(10);
+          userToUpdate.password = await bcrypt.hash(password, salt);
+        }
+
+        // Sauvegarde des modifications
+        await userToUpdate.save();
+
+        return NextResponse.json({
+          success: true,
+          message: 'Utilisateur mis à jour avec succès',
+          data: {
+            id: userToUpdate.id,
+            name: userToUpdate.name,
+            email: userToUpdate.email,
+            role: userToUpdate.role
+          }
+        });
+      }
+
       case 'changeEmail': {
-        const newEmail = formData.get('newEmail') as string;
+        const { newEmail } = data;
         if (!newEmail) {
           return NextResponse.json(
             { success: false, message: 'Email requis' },
@@ -255,11 +327,24 @@ export async function PUT(request: NextRequest) {
           );
         }
 
-        const userToUpdate = await User.findById(user.id);
+        const userToUpdate = await User.findOne({ id: user.id });
         if (!userToUpdate) {
           return NextResponse.json(
             { success: false, message: 'Utilisateur non trouvé' },
             { status: 404 }
+          );
+        }
+
+        // Vérification si l'email est déjà utilisé
+        const existingUser = await User.findOne({
+          email: newEmail,
+          id: { $ne: user.id }
+        });
+
+        if (existingUser) {
+          return NextResponse.json(
+            { success: false, message: 'Cet email est déjà utilisé' },
+            { status: 400 }
           );
         }
 
@@ -280,95 +365,16 @@ export async function PUT(request: NextRequest) {
             id: userToUpdate.id,
             email: userToUpdate.email,
             name: userToUpdate.name,
-            role: userToUpdate.role,
-            avatar: userToUpdate.avatar
+            role: userToUpdate.role
           },
           token: newToken
         });
       }
 
       case 'updateProfile': {
-        const avatarFile = formData.get('avatar') as File;
-        if (!avatarFile) {
-          return NextResponse.json(
-            { success: false, message: 'Image requise' },
-            { status: 400 }
-          );
-        }
-
-        // Vérification du type de fichier
-        if (!ALLOWED_FILE_TYPES.includes(avatarFile.type)) {
-          return NextResponse.json(
-            { success: false, message: 'Type de fichier non autorisé' },
-            { status: 400 }
-          );
-        }
-
-        // Vérification de la taille du fichier
-        if (avatarFile.size > MAX_FILE_SIZE) {
-          return NextResponse.json(
-            { success: false, message: 'Fichier trop volumineux (max 5MB)' },
-            { status: 400 }
-          );
-        }
-
-        const userToUpdate = await User.findById(user.id);
-        if (!userToUpdate) {
-          return NextResponse.json(
-            { success: false, message: 'Utilisateur non trouvé' },
-            { status: 404 }
-          );
-        }
-
-        // Suppression de l'ancien avatar
-        if (userToUpdate.avatar) {
-          const oldAvatarPath = join(PUBLIC_DIR, userToUpdate.avatar);
-          await cleanOldFile(oldAvatarPath);
-        }
-
-        // Sauvegarde du nouvel avatar
-        const bytes = await avatarFile.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-
-        const fileExtension = avatarFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-        const fileName = `avatar-${user.id}-${Date.now()}.${fileExtension}`;
-        const filePath = join(UPLOAD_DIR, fileName);
+        const { name, avatar } = data;
+        const userToUpdate = await User.findOne({ id: user.id });
         
-        await writeFile(filePath, buffer);
-
-        // Mise à jour du chemin dans la base de données
-        const avatarUrl = `/uploads/${fileName}`;
-        userToUpdate.avatar = avatarUrl;
-        await userToUpdate.save();
-
-        return NextResponse.json({
-          success: true,
-          message: 'Avatar mis à jour avec succès',
-          data: {
-            id: userToUpdate.id,
-            email: userToUpdate.email,
-            name: userToUpdate.name,
-            role: userToUpdate.role,
-            avatar: avatarUrl
-          }
-        });
-      }
-
-      case 'updateUser': {
-        if (user.role !== 'admin') {
-          return NextResponse.json(
-            { success: false, message: 'Non autorisé' },
-            { status: 401 }
-          );
-        }
-
-        const id = formData.get('id') as string;
-        const name = formData.get('name') as string;
-        const email = formData.get('email') as string;
-        const role = formData.get('role') as 'user' | 'admin';
-        const password = formData.get('password') as string | null;
-
-        const userToUpdate = await User.findOne({ id: id });
         if (!userToUpdate) {
           return NextResponse.json(
             { success: false, message: 'Utilisateur non trouvé' },
@@ -376,24 +382,31 @@ export async function PUT(request: NextRequest) {
           );
         }
 
-        userToUpdate.name = name;
-        userToUpdate.email = email;
-        userToUpdate.role = role;
+        if (name) {
+          userToUpdate.name = name;
+        }
 
-        if (password) {
-          const salt = await bcrypt.genSalt(10);
-          userToUpdate.password = await bcrypt.hash(password, salt);
+        if (avatar) {
+          if (userToUpdate.avatar) {
+            try {
+              const oldAvatarPath = join(PUBLIC_DIR, userToUpdate.avatar);
+              await unlink(oldAvatarPath);
+            } catch (error) {
+              console.error('Erreur lors de la suppression de l\'ancien avatar:', error);
+            }
+          }
+          userToUpdate.avatar = avatar;
         }
 
         await userToUpdate.save();
 
         return NextResponse.json({
           success: true,
-          message: 'Utilisateur mis à jour avec succès',
+          message: 'Profil mis à jour avec succès',
           data: {
             id: userToUpdate.id,
-            name: userToUpdate.name,
             email: userToUpdate.email,
+            name: userToUpdate.name,
             role: userToUpdate.role,
             avatar: userToUpdate.avatar
           }
@@ -402,7 +415,7 @@ export async function PUT(request: NextRequest) {
 
       default:
         return NextResponse.json(
-          { success: false, message: 'Action non valide' },
+          { success: false, message: 'Action non reconnue' },
           { status: 400 }
         );
     }
