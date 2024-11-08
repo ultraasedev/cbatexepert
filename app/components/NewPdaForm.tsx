@@ -134,7 +134,7 @@ export default function NewPdaForm() {
 
       const pdaTitle = generatePdaTitle();
       const estimatedCost = parseFloat(formData.details.estimatedCost);
-      const calculatedGrantAmount = Math.round(estimatedCost * 0.4 * 100) / 100;
+      const calculatedGrantAmount = Math.round(estimatedCost * 0.2857 * 100) / 100;
 
       const dataToSend = {
         title: pdaTitle,

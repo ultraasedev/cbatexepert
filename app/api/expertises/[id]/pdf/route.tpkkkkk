@@ -51,8 +51,9 @@ interface IExpertise {
     anneeInstallation: number;
   };
   chauffage: {
-    type: 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
-    nombre: number;
+    types: ("Électrique" | "Gaz" | "Fioul" | "Bois" | "Poêle" | "Pac")[];
+    nombreRadiateurs: number;
+    localisations: string[];
     etat: 'Bon' | 'Moyen' | 'Mauvais';
     anneeInstallation: number;
   };
@@ -74,7 +75,7 @@ interface IExpertise {
     etat: 'Bon' | 'Moyen' | 'Mauvais';
   };
   ventilation: {
-    type: 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
+    types: ("VMC Simple flux" | "Double Flux" | "VMI" | "VPH")[];
     nombreBouches: number;
     piecesEquipees: string;
     ventilationNaturelle: boolean;
@@ -82,7 +83,7 @@ interface IExpertise {
     etat: 'Bon' | 'Moyen' | 'Mauvais';
   };
   isolation: {
-    type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
+    types: ("Ouate de cellulose" | "Laine de Roche" | "Laine de Verre" | "Isolation Minerales")[];
     pose: 'Sous rampants' | 'En soufflage' | 'En rouleau';
     epaisseur: number;
     etat: 'Bon' | 'Moyen' | 'Mauvais';
@@ -99,7 +100,7 @@ interface IExpertise {
     etat: 'Bon' | 'Moyen' | 'Mauvais';
   };
   toiture: {
-    type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
+    types: ("Ardoise Naturelle" | "Ardoise Fibrociment" | "Tuiles" | "Tuiles Béton" | "Acier")[];
     typeFaitage: 'Cimente' | 'En Boîte';
     dateEntretien: Date;
     typeEntretien: string;
@@ -181,7 +182,7 @@ const generateRecommendations = (expertise: IExpertise): string => {
   }
 
   if (expertise.chauffage.etat === 'Mauvais') {
-    recommendations.push(`• Le système de chauffage ${expertise.chauffage.type} installé en ${expertise.chauffage.anneeInstallation} nécessite une intervention`);
+    recommendations.push(`• Le système de chauffage ${expertise.chauffage.types} installé en ${expertise.chauffage.anneeInstallation} nécessite une intervention`);
   }
 
   if (expertise.humidite.etat === 'Mauvais') {
@@ -189,14 +190,14 @@ const generateRecommendations = (expertise: IExpertise): string => {
   }
 
   if (expertise.isolation.etat === 'Mauvais' || expertise.isolation.etatCombles === 'Mauvais') {
-    recommendations.push(`• L'isolation (${expertise.isolation.type}) nécessite une amélioration` +
+    recommendations.push(`• L'isolation (${expertise.isolation.types}) nécessite une amélioration` +
       (expertise.isolation.presenceCondensation 
         ? `\n  - Présence de condensation dans les combles (${expertise.isolation.tauxHumiditeCombles}% d'humidité)` 
         : ''));
   }
 
   if (expertise.ventilation.etat === 'Mauvais') {
-    recommendations.push(`• La ventilation ${expertise.ventilation.type} nécessite une révision ou un remplacement`);
+    recommendations.push(`• La ventilation ${expertise.ventilation.types.join(', ')} nécessite une révision ou un remplacement`);
   }
 
   if (!expertise.tableauElectrique.auxNormes || expertise.tableauElectrique.etat === 'Mauvais') {
@@ -204,7 +205,7 @@ const generateRecommendations = (expertise: IExpertise): string => {
   }
 
   if (expertise.toiture.etat === 'Mauvais') {
-    recommendations.push(`• La toiture (${expertise.toiture.type}) présente des signes de dégradation` +
+    recommendations.push(`• La toiture (${expertise.toiture.types}) présente des signes de dégradation` +
       (expertise.toiture.presenceImpuretes ? '\n  - Présence d\'impuretés nécessitant un nettoyage' : ''));
   }
 
@@ -246,7 +247,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       );
     }
 
-    const rawData = expertiseData.toObject() as RawData;
+    const rawData = expertiseData.toObject();
     
     const expertise: IExpertise = {
       ...rawData,
@@ -259,7 +260,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
         _id: rawData.createdBy?._id?.toString(),
         id: rawData.createdBy?.id?.toString()
       }
-    };
+    } as IExpertise;
 
     if (expertise.createdBy &&
         expertise.createdBy.toString() !== user.id &&
@@ -354,10 +355,10 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
       head: [['Élément', 'État', 'Détails']],
       body: [
         ['Ouvertures', expertise.ouvertures.etat, `${expertise.ouvertures.nombre} ouvertures - ${expertise.ouvertures.typeVitrage}`],
-        ['Chauffage', expertise.chauffage.etat, expertise.chauffage.type],
-        ['Ventilation', expertise.ventilation.etat, expertise.ventilation.type],
-        ['Isolation', expertise.isolation.etat, `${expertise.isolation.type} - ${expertise.isolation.pose}`],
-        ['Toiture', expertise.toiture.etat, expertise.toiture.type],
+        ['Chauffage', expertise.chauffage.etat, expertise.chauffage.types],
+        ['Ventilation', expertise.ventilation.etat, expertise.ventilation.types],
+        ['Isolation', expertise.isolation.etat, `${expertise.isolation.types} - ${expertise.isolation.pose}`],
+        ['Toiture', expertise.toiture.etat, expertise.toiture.types],
         ['Installation électrique', expertise.tableauElectrique.etat, `${expertise.tableauElectrique.type}${expertise.tableauElectrique.auxNormes ? ' - Aux normes' : ' - Non conforme'}`]
       ],
       styles: { 

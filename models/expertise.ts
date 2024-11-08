@@ -13,6 +13,21 @@ interface GlobalEvaluation {
   comment: string;
 }
 
+interface BaseIsolation {
+  presence: boolean;
+  type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales' | '';
+  pose: 'Sous rampants' | 'En soufflage' | 'En rouleau' | '';
+  epaisseur: number;
+  etat: 'Bon' | 'Moyen' | 'Mauvais';
+}
+
+interface CombleIsolation extends BaseIsolation {
+  presenceCondensation: boolean;
+  localisationCondensation?: string;
+  tauxHumiditeCombles: number;
+  etatCombles: 'Bon' | 'Moyen' | 'Mauvais';
+}
+
 interface IExpertise extends Document {
   typeLogement: 'appartement' | 'maison';
   beneficiaire: {
@@ -32,14 +47,16 @@ interface IExpertise extends Document {
     anneeInstallation: number;
   };
   chauffage: {
-    type: 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
-    nombre: number;
+    types: ('Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac')[];
+    nombreRadiateurs: number;
+    localisations: string[];
     etat: 'Bon' | 'Moyen' | 'Mauvais';
     anneeInstallation: number;
   };
   humidite: {
     taux: number;
     etat: 'Bon' | 'Moyen' | 'Mauvais';
+    tauxParPiece: Record<string, number>;
   };
   facade: {
     type: 'Enduit' | 'Peinture' | 'Pierre';
@@ -55,22 +72,16 @@ interface IExpertise extends Document {
     etat: 'Bon' | 'Moyen' | 'Mauvais';
   };
   ventilation: {
-    type: 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
-    nombreBouches: number;
-    piecesEquipees: string;
+    types: ('VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH')[];
+    localisations: string[];
     ventilationNaturelle: boolean;
     anneePose: number;
     etat: 'Bon' | 'Moyen' | 'Mauvais';
   };
   isolation: {
-    type: 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
-    pose: 'Sous rampants' | 'En soufflage' | 'En rouleau';
-    epaisseur: number;
-    etat: 'Bon' | 'Moyen' | 'Mauvais';
-    presenceCondensation: boolean;
-    localisationCondensation?: string;
-    tauxHumiditeCombles: number;
-    etatCombles: 'Bon' | 'Moyen' | 'Mauvais';
+    combles: CombleIsolation;
+    murs: BaseIsolation;
+    sols?: BaseIsolation;
   };
   charpente: {
     type: 'Fermette' | 'Traditionnelle' | 'Metalique';
@@ -98,7 +109,7 @@ interface IExpertise extends Document {
     toString(): string;
     _id?: string;
     id?: string;
-  }; // Changé pour correspondre au PDA
+  };
   status: 'En cours' | 'Terminé';
   createdAt: Date;
   updatedAt: Date;
@@ -127,15 +138,20 @@ const ExpertiseSchema = new mongoose.Schema({
   },
   
   chauffage: {
-    type: { type: String, enum: ['Électrique', 'Gaz', 'Fioul', 'Bois', 'Poêle', 'Pac'], required: true },
-    nombre: { type: Number, required: true },
+    types: [{ type: String, enum: ['Électrique', 'Gaz', 'Fioul', 'Bois', 'Poêle', 'Pac'] }],
+    nombreRadiateurs: { type: Number, default: 0 },
+    localisations: [{ type: String }],
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
     anneeInstallation: { type: Number, required: true }
   },
   
   humidite: {
     taux: { type: Number, required: true },
-    etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+    etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
+    tauxParPiece: {
+      type: Map,
+      of: Number
+    }
   },
   
   facade: {
@@ -154,23 +170,39 @@ const ExpertiseSchema = new mongoose.Schema({
   },
   
   ventilation: {
-    type: { type: String, enum: ['VMC Simple flux', 'Double Flux', 'VMI', 'VPH'], required: true },
-    nombreBouches: { type: Number, required: true },
-    piecesEquipees: { type: String, required: true },
+    types: [{ type: String, enum: ['VMC Simple flux', 'Double Flux', 'VMI', 'VPH'] }],
+    localisations: [{ type: String }],
     ventilationNaturelle: { type: Boolean, required: true },
     anneePose: { type: Number, required: true },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
   
   isolation: {
-    type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales'], required: true },
-    pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau'], required: true },
-    epaisseur: { type: Number, required: true },
-    etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
-    presenceCondensation: { type: Boolean, required: true },
-    localisationCondensation: { type: String },
-    tauxHumiditeCombles: { type: Number, required: true },
-    etatCombles: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+    combles: {
+      presence: { type: Boolean, required: true },
+      type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales', ''] },
+      pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
+      epaisseur: { type: Number },
+      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
+      presenceCondensation: { type: Boolean, required: true },
+      localisationCondensation: { type: String },
+      tauxHumiditeCombles: { type: Number, required: true },
+      etatCombles: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+    },
+    murs: {
+      presence: { type: Boolean, required: true },
+      type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales', ''] },
+      pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
+      epaisseur: { type: Number },
+      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+    },
+    sols: {
+      presence: { type: Boolean },
+      type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales', ''] },
+      pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
+      epaisseur: { type: Number },
+      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'] }
+    }
   },
   
   charpente: {
@@ -211,7 +243,6 @@ const ExpertiseSchema = new mongoose.Schema({
     }
   },
   
-  // Modification du createdBy pour correspondre au PDA
   createdBy: { 
     type: String, 
     required: true 

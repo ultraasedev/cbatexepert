@@ -25,8 +25,24 @@ export type GlobalConditionType = 'Favorable' | 'Correct' | 'Critique';
 // Types pour les valeurs spécifiques
 export type HeatingType = 'Électrique' | 'Gaz' | 'Fioul' | 'Bois' | 'Poêle' | 'Pac';
 export type VentilationType = 'VMC Simple flux' | 'Double Flux' | 'VMI' | 'VPH';
-export type IsolationType = 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales';
-export type IsolationPose = 'Sous rampants' | 'En soufflage' | 'En rouleau';
+export type IsolationType = 'Ouate de cellulose' | 'Laine de Roche' | 'Laine de Verre' | 'Isolation Minerales' | '';
+export type IsolationPose = 'Sous rampants' | 'En soufflage' | 'En rouleau' | '';
+
+// Interfaces pour l'isolation
+export interface BaseIsolation {
+  presence: boolean;
+  type: IsolationType;
+  pose: IsolationPose;
+  epaisseur: number;
+  condition: ConditionType;
+}
+
+export interface CombleIsolation extends BaseIsolation {
+  hasCondensation: boolean;
+  condensationLocations: string[];
+  humidityRate: number;
+  etatCombles: ConditionType;
+}
 
 // Interface pour le sélecteur d'état
 export interface StateSelectorProps {
@@ -58,37 +74,25 @@ export interface Room {
   type: string;
   name: string;
   floor: number;
+  humidity: number;
+  humidityCondition: ConditionType;
   windows: {
     count: number;
     type: 'simple' | 'double';
     installationYear: number;
     condition: ConditionType;
   };
-  heating: {
-    types: string[];
-    installationYear: number;
-    condition: ConditionType;
+  condition: {
+    windows: ConditionType;
+    heating: ConditionType;
+    humidity: ConditionType;
   };
-  ventilation: string[];
+  ventilation: VentilationType[];
   ventilationCondition: ConditionType;
-  humidity: number;
-  humidityCondition: ConditionType;
-  isolation: {
-    condition: ConditionType;
-  };
-  charpente: {
-    condition: ConditionType;
-  };
-  toiture: {
-    condition: ConditionType;
-  };
-  facades: {
-    condition: ConditionType;
-  };
 }
 
 export interface Expertise {
-  _id: string;
+  _id?: string;
   typeLogement: 'appartement' | 'maison';
   beneficiaire: {
     nom: string;
@@ -100,21 +104,35 @@ export interface Expertise {
     superficie: number;
     nombreEtages: number;
   };
-  ouvertures: {
-    nombre: number;
-    typeVitrage: 'simple' | 'double';
-    etat: ConditionType;
-    anneeInstallation: number;
-  };
+  pieces: Array<{
+    _id?: string;
+    type: string;
+    nom: string;
+    etage: number;
+    ouvertures: {
+      nombre: number;
+      typeVitrage: 'simple' | 'double';
+      etat: ConditionType;
+      anneeInstallation: number;
+    };
+    humidite: {
+      taux: number;
+      etat: ConditionType;
+    };
+  }>;
   chauffage: {
-    type: HeatingType;
-    nombre: number;
-    etat: ConditionType;
+    types: HeatingType[];
+    nombreRadiateurs: number;
+    localisations: string[];
     anneeInstallation: number;
-  };
-  humidite: {
-    taux: number;
     etat: ConditionType;
+  };
+  ventilation: {
+    types: VentilationType[];
+    localisations: string[];
+    anneePose: number;
+    etat: ConditionType;
+    ventilationNaturelle: boolean;
   };
   facade: {
     type: 'Enduit' | 'Peinture' | 'Pierre';
@@ -129,30 +147,10 @@ export interface Expertise {
     auxNormes: boolean;
     etat: ConditionType;
   };
-  ventilation: {
-    type: VentilationType;
-    nombreBouches: number;
-    piecesEquipees: string;
-    ventilationNaturelle: boolean;
-    anneePose: number;
-    etat: ConditionType;
-  };
   isolation: {
-    type: IsolationType;
-    pose: IsolationPose;
-    epaisseur: number;
-    etat: ConditionType;
-    presenceCondensation: boolean;
-    localisationCondensation?: string;
-    tauxHumiditeCombles: number;
-    etatCombles: ConditionType;
-  };
-  charpente: {
-    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
-    presenceArtive: boolean;
-    entretienEffectue: boolean;
-    dateEntretien?: Date;
-    etat: ConditionType;
+    combles: CombleIsolation;
+    murs: BaseIsolation;
+    sols?: BaseIsolation;
   };
   toiture: {
     type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
@@ -163,48 +161,33 @@ export interface Expertise {
     annee: number;
     etat: ConditionType;
   };
-  evaluations?: {
-    rooms: {
-      [key: string]: RoomEvaluation;
-    };
+  charpente: {
+    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
+    presenceArtive: boolean;
+    entretienEffectue: boolean;
+    dateEntretien?: Date;
+    etat: ConditionType;
+  };
+  impuretes: {
+    condition: ConditionType;
+  };
+  humidite: {
+    condition: ConditionType;
+    tauxParPiece: Record<string, number>;
+  };
+  securiteIncendie: {
+    bouleIncendie: boolean;
+    extincteur: boolean;
+    detecteurFumee: boolean;
+  };
+  evaluations: {
+    rooms: Record<string, RoomEvaluation>;
     global: GlobalEvaluation;
   };
-  createdBy: string;
   status: ExpertiseStatus;
+  createdBy: string;
   createdAt?: Date;
   updatedAt?: Date;
-}
-
-// Interfaces pour les PDA
-export interface ExpertisePlanDetails {
-  beneficiary: Beneficiary;
-  typeOfImprovement: string;
-  fiscalIncome: number;
-  estimatedCost: number;
-  grantAmount: number;
-}
-
-export interface ExpertisePlan {
-  id: string;
-  title: string;
-  createdAt: string;
-  status: ExpertiseStatus;
-  details: ExpertisePlanDetails;
-}
-
-export interface PDA {
-  id: string;
-  title: string;
-  status: ExpertiseStatus;
-  details: {
-    beneficiary: Beneficiary;
-    typeOfImprovement: string;
-    fiscalIncome: number;
-    estimatedCost: number;
-    grantAmount: number;
-  };
-  createdBy: string;
-  createdAt: string;
 }
 
 // Types pour les formulaires
@@ -234,29 +217,23 @@ export interface FormDataDetails {
     upToStandards: boolean;
     condition: ConditionType;
   };
-  isolation: {
-    combles: {
-      type: IsolationType;
-      installation: IsolationPose;
-      thickness: number;
-      condition: ConditionType;
-      hasCondensation: boolean;
-      condensationLocations: string[];
-      humidityRate: number;
-    };
-    murs: {
-      type: IsolationType;
-      installation: IsolationPose;
-      thickness: number;
-      condition: ConditionType;
-    };
-    sols?: {
-      type: IsolationType;
-      installation: IsolationPose;
-      thickness: number;
-      condition: ConditionType;
-    };
+  chauffage: {
+    types: HeatingType[];
+    nombreRadiateurs: number;
+    localisations: string[];
+    installationYear: number;
     condition: ConditionType;
+  };
+  ventilation: {
+    types: VentilationType[];
+    localisations: string[];
+    installationYear: number;
+    condition: ConditionType;
+  };
+  isolation: {
+    combles: CombleIsolation;
+    murs: BaseIsolation;
+    sols?: BaseIsolation;
   };
   framework: {
     type: 'Fermette' | 'Traditionnelle' | 'Metalique';
@@ -272,6 +249,34 @@ export interface FormDataDetails {
     maintenanceType: string;
     hasImpurities: boolean;
     installationYear: number;
+    condition: ConditionType;
+  };
+  humidite: {
+    condition: ConditionType;
+    tauxParPiece: Record<string, number>;
+  };
+  impuretes: {
+    condition: ConditionType;
+  };
+  securiteIncendie: {
+    bouleIncendie: boolean;
+    extincteur: boolean;
+    detecteurFumee: boolean;
+  };
+  toiture: {
+    type: 'Ardoise Naturelle' | 'Ardoise Fibrociment' | 'Tuiles' | 'Tuiles Béton' | 'Acier';
+    ridgeType: 'Cimente' | 'En Boîte';
+    maintenanceDate: string;
+    maintenanceType: string;
+    hasImpurities: boolean;
+    installationYear: number;
+    condition: ConditionType;
+  };
+  charpente: {
+    type: 'Fermette' | 'Traditionnelle' | 'Metalique';
+    hasBeam: boolean;
+    hadMaintenance: boolean;
+    maintenanceDate: string | null;
     condition: ConditionType;
   };
 }
@@ -293,7 +298,136 @@ export interface ExpertiseFormProps {
   onSubmit?: (formData: FormData) => Promise<void>;
 }
 
+export interface ExpertisePlanDetails {
+  beneficiary: Beneficiary;
+  typeOfImprovement: string;
+  fiscalIncome: number;
+  estimatedCost: number;
+  grantAmount: number;
+}
+
+export interface ExpertisePlan {
+  id: string;
+  title: string;
+  createdAt: string;
+  status: ExpertiseStatus;
+  details: ExpertisePlanDetails;
+}
+
+// Interfaces pour les PDA
+export interface PDA {
+  id: string;
+  title: string;
+  status: ExpertiseStatus;
+  details: {
+    beneficiary: Beneficiary;
+    typeOfImprovement: string;
+    fiscalIncome: number;
+    estimatedCost: number;
+    grantAmount: number;
+  };
+  createdBy: string;
+  createdAt: string;
+}
+
+// Interface pour la modal de sélection des localisations
+export interface LocationModalConfig {
+  isOpen: boolean;
+  type: 'chauffage' | 'ventilation';
+  title: string;
+}
+
 export interface PDAFormProps {
   isEditing?: boolean;
   initialData?: PDA;
+}
+
+export interface AuthHeaders {
+  'Authorization': string;
+  'Content-Type': string;
+}
+
+// Interface pour les suggestions d'adresse
+export interface AddressSuggestion {
+  label: string;
+  context: string;
+}
+
+// Interfaces pour les réponses API
+export interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  errors?: string[];
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  message: string;
+  errors?: string[];
+}
+
+export interface ApiSuccessResponse<T> {
+  success: true;
+  data: T;
+  message?: string;
+}
+
+// Utility types
+export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+export type DeepPartial<T> = {
+  [P in keyof T]?: T[P] extends Array<infer U>
+    ? Array<DeepPartial<U>>
+    : T[P] extends object
+    ? DeepPartial<T[P]>
+    : T[P];
+};
+
+// Type de validation
+export interface ValidationResult {
+  isValid: boolean;
+  errors: string[];
+}
+
+export interface RoomValidation extends ValidationResult {
+  roomIndex?: number;
+  fieldName?: string;
+}
+
+// Types pour les stats et métriques
+export interface ExpertiseMetrics {
+  total: number;
+  enCours: number;
+  termine: number;
+  lastWeek: number;
+  lastMonth: number;
+}
+
+export interface EvaluationStats {
+  favorable: number;
+  correct: number;
+  critique: number;
+  averageScore: number;
+}
+
+// Types pour les filtres
+export interface ExpertiseFilters {
+  status?: ExpertiseStatus;
+  typeLogement?: 'appartement' | 'maison';
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
+  condition?: GlobalConditionType;
+}
+
+// Types pour les exports
+export interface ExportOptions {
+  format: 'pdf' | 'excel';
+  includeEvaluations: boolean;
+  includePhotos: boolean;
+  dateRange?: {
+    start: Date;
+    end: Date;
+  };
 }
