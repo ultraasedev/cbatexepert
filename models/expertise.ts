@@ -19,6 +19,7 @@ interface BaseIsolation {
   pose: "Sous rampants" | "En soufflage" | "En rouleau";
   epaisseur: number;
   etat: 'Bon' | 'Moyen' | 'Mauvais';
+  croutageEffectue: boolean; // nouveau champ
 }
 
 interface CombleIsolation extends BaseIsolation {
@@ -184,6 +185,7 @@ const ExpertiseSchema = new mongoose.Schema({
       pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
       epaisseur: { type: Number },
       etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
+      croutageEffectue: { type: Boolean }, // Ajout du champ
       presenceCondensation: { type: Boolean, required: true },
       zonesCondensation: [{ type: String }],
       tauxHumidite: { type: Number, required: true },
@@ -194,14 +196,16 @@ const ExpertiseSchema = new mongoose.Schema({
       type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales', ''] },
       pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
       epaisseur: { type: Number },
-      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
+      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true },
+      croutageEffectue: { type: Boolean }
     },
     sols: {
       presence: { type: Boolean },
       type: { type: String, enum: ['Ouate de cellulose', 'Laine de Roche', 'Laine de Verre', 'Isolation Minerales', ''] },
       pose: { type: String, enum: ['Sous rampants', 'En soufflage', 'En rouleau', ''] },
       epaisseur: { type: Number },
-      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'] }
+      etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'] },
+      croutageEffectue: { type: Boolean }
     }
   },
   

@@ -141,7 +141,7 @@ const StatCard: React.FC<StatCardProps> = ({
 // Composant principal Dashboard
 export default function Dashboard() {
   const router = useRouter();
-  const { user, getAuthHeaders } = useAuth();
+  const { user, getAuthHeaders } = useAuth(); 
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalPdas: 0,

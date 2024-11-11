@@ -36,6 +36,7 @@ interface BaseIsolation {
   pose: "Sous rampants" | "En soufflage" | "En rouleau";
   epaisseur: number;
   etat: 'Bon' | 'Moyen' | 'Mauvais';
+  croutageEffectue: false;
 }
 
 interface CombleIsolation extends BaseIsolation {
@@ -176,7 +177,7 @@ const calculateGlobalScore = (expertise: IExpertise): number => {
   const elements = [
     expertise.ouvertures.etat,
     expertise.chauffage.etat,
-    expertise.humidite.etat,  // changé de condition à etat
+    expertise.humidite.etat,
     expertise.facade.etat,
     expertise.tableauElectrique.etat,
     expertise.ventilation.etat,
@@ -186,8 +187,23 @@ const calculateGlobalScore = (expertise: IExpertise): number => {
     expertise.toiture.etat
   ];
 
-  const totalScore = elements.reduce((sum, etat) => sum + calculateScore(etat), 0);
-  return totalScore / elements.length;
+  // Nouvelle logique d'évaluation
+  const hasBad = elements.some(etat => etat === 'Mauvais');
+  const hasGood = elements.some(etat => etat === 'Bon');
+  const allGood = elements.every(etat => etat === 'Bon');
+
+  // Si au moins un élément est mauvais
+  if (hasBad) {
+    return 1; // Score Mauvais = 1
+  }
+  // Si tout est bon
+  else if (allGood) {
+    return 5; // Score Bon = 5
+  }
+  // Si mix de Bon et Moyen ou tout est Moyen
+  else {
+    return 3; // Score Moyen = 3
+  }
 };
 
 const generateRecommendations = (expertise: IExpertise): string => {
@@ -222,6 +238,25 @@ const generateRecommendations = (expertise: IExpertise): string => {
       }
     }
     recommendations.push(isolationCombles);
+  }
+
+  // Avertissements pour le croutage manquant dans les isolations en soufflage
+  if (expertise.isolation.combles.presence && 
+      expertise.isolation.combles.pose === 'En soufflage' && 
+      !expertise.isolation.combles.croutageEffectue) {
+    recommendations.push(`• ATTENTION : Il faut absolument respecter les normes en vigueur - faites rapidement le croutage sur votre isolation en soufflage des combles`);
+  }
+
+  if (expertise.isolation.murs.presence && 
+      expertise.isolation.murs.pose === 'En soufflage' && 
+      !expertise.isolation.murs.croutageEffectue) {
+    recommendations.push(`• ATTENTION : Il faut absolument respecter les normes en vigueur - faites rapidement le croutage sur votre isolation en soufflage des murs`);
+  }
+
+  if (expertise.isolation.sols?.presence && 
+      expertise.isolation.sols.pose === 'En soufflage' && 
+      !expertise.isolation.sols.croutageEffectue) {
+    recommendations.push(`• ATTENTION : Il faut absolument respecter les normes en vigueur - faites rapidement le croutage sur votre isolation en soufflage du sous-sol`);
   }
 
   // Isolation des murs
@@ -285,8 +320,7 @@ const generateRecommendations = (expertise: IExpertise): string => {
     let facadeDetails = `• La façade nécessite une rénovation\n`;
     facadeDetails += `  - Type: ${expertise.facade.type}\n`;
     facadeDetails += `  - Épaisseur des murs: ${expertise.facade.epaisseurMurs}cm\n`;
-    const lastMaintenance = new Date(expertise.facade.dernierEntretien).toLocaleDateString('fr-FR');
-    facadeDetails += `  - Dernier entretien: ${lastMaintenance}\n`;
+    facadeDetails += `  - Dernier entretien: ${new Date(expertise.facade.dernierEntretien).toLocaleDateString('fr-FR')}\n`;
     recommendations.push(facadeDetails);
   }
 
@@ -606,8 +640,9 @@ const tauxParPieceConverted = Object.fromEntries(
     yPosition += 50;
 
     // État général
-    const condition = globalScore >= 4 ? 'FAVORABLE' : 
-                     globalScore >= 2.5 ? 'CORRECT' : 'CRITIQUE';
+    
+const condition = globalScore === 5 ? 'FAVORABLE' : 
+globalScore === 3 ? 'CORRECT' : 'CRITIQUE';
 
     doc.setFillColor(scoreColor[0], scoreColor[1], scoreColor[2]);
     doc.roundedRect(margin, yPosition, pageWidth - 2 * margin, 30, 3, 3, 'F');

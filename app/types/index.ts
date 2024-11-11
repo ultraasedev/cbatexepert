@@ -35,6 +35,7 @@ export interface BaseIsolation {
   pose: IsolationPose;
   epaisseur: number;
   condition: ConditionType;
+  croutageEffectue?: boolean; 
 }
 
 export interface CombleIsolation extends BaseIsolation {
