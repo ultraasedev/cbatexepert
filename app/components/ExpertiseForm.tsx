@@ -1902,337 +1902,277 @@ const expertiseData = {
         );
 
         case 7:
-          return (
-            <VStack spacing={6}>
-              <Heading size="md">Configuration de l'isolation</Heading>
-        
-              {/* Isolation des combles */}
-              <Card width="100%">
-                <CardHeader>
-                  <Heading size="sm">Isolation des combles</Heading>
-                </CardHeader>
-                <CardBody>
-                  <VStack spacing={4}>
-                    <FormControl>
-                      <FormLabel>Présence d'isolation</FormLabel>
-                      <RadioGroup
-                        value={formData.details.isolation.combles.presence ? "oui" : "non"}
-                        onChange={(value) =>
-                          handleInputChange(
-                            "details.isolation.combles.presence",
-                            value === "oui"
-                          )
-                        }
-                      >
-                        <Stack direction="row">
-                          <Radio value="oui">Oui</Radio>
-                          <Radio value="non">Non</Radio>
-                        </Stack>
-                      </RadioGroup>
-                    </FormControl>
-        
-                    {formData.details.isolation.combles.presence && (
-                      <>
-                        <FormControl>
-                          <FormLabel>Type d'isolation</FormLabel>
-                          <Select
-                            value={formData.details.isolation.combles.type}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "details.isolation.combles.type",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Sélectionnez un type</option>
-                            {TYPE_ISOLATION.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-        
-                        <FormControl>
-                          <FormLabel>Type de pose</FormLabel>
-                          <Select
-                            value={formData.details.isolation.combles.pose}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "details.isolation.combles.pose",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Sélectionnez un type</option>
-                            {TYPE_ISOLATION_POSE.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-        
-                        {formData.details.isolation.combles.pose === "En soufflage" && (
-                          <FormControl>
-                            <FormLabel>Croutage effectué ?</FormLabel>
-                            <RadioGroup
-                              value={formData.details.isolation.combles.croutageEffectue ? "oui" : "non"}
-                              onChange={(value) =>
-                                handleInputChange(
-                                  "details.isolation.combles.croutageEffectue",
-                                  value === "oui"
-                                )
-                              }
-                            >
-                              <Stack direction="row">
-                                <Radio value="oui">Oui</Radio>
-                                <Radio value="non">Non</Radio>
-                              </Stack>
-                            </RadioGroup>
-                          </FormControl>
-                        )}
-        
-                        <FormControl>
-                          <FormLabel>Épaisseur (cm)</FormLabel>
-                          <NumberInput
-                            min={0}
-                            value={formData.details.isolation.combles.epaisseur}
-                            onChange={(value) =>
-                              handleInputChange(
-                                "details.isolation.combles.epaisseur",
-                                parseInt(value)
-                              )
-                            }
-                          >
-                            <NumberInputField />
-                          </NumberInput>
-                        </FormControl>
-                      </>
-                    )}
-                  </VStack>
-                </CardBody>
-              </Card>
-        
-              {/* Isolation des murs */}
-              <Card width="100%">
-                <CardHeader>
-                  <Heading size="sm">Isolation des murs</Heading>
-                </CardHeader>
-                <CardBody>
-                  <VStack spacing={4}>
-                    <FormControl>
-                      <FormLabel>Présence d'isolation</FormLabel>
-                      <RadioGroup
-                        value={formData.details.isolation.murs.presence ? "oui" : "non"}
-                        onChange={(value) =>
-                          handleInputChange(
-                            "details.isolation.murs.presence",
-                            value === "oui"
-                          )
-                        }
-                      >
-                        <Stack direction="row">
-                          <Radio value="oui">Oui</Radio>
-                          <Radio value="non">Non</Radio>
-                        </Stack>
-                      </RadioGroup>
-                    </FormControl>
-        
-                    {formData.details.isolation.murs.presence && (
-                      <>
-                        <FormControl>
-                          <FormLabel>Type d'isolation</FormLabel>
-                          <Select
-                            value={formData.details.isolation.murs.type}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "details.isolation.murs.type",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Sélectionnez un type</option>
-                            {TYPE_ISOLATION.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-        
-                        <FormControl>
-                          <FormLabel>Type de pose</FormLabel>
-                          <Select
-                            value={formData.details.isolation.murs.pose}
-                            onChange={(e) =>
-                              handleInputChange(
-                                "details.isolation.murs.pose",
-                                e.target.value
-                              )
-                            }
-                          >
-                            <option value="">Sélectionnez un type</option>
-                            {TYPE_ISOLATION_POSE.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-        
-                        {formData.details.isolation.murs.pose === "En soufflage" && (
-                          <FormControl>
-                            <FormLabel>Croutage effectué ?</FormLabel>
-                            <RadioGroup
-                              value={formData.details.isolation.murs.croutageEffectue ? "oui" : "non"}
-                              onChange={(value) =>
-                                handleInputChange(
-                                  "details.isolation.murs.croutageEffectue",
-                                  value === "oui"
-                                )
-                              }
-                            >
-                              <Stack direction="row">
-                                <Radio value="oui">Oui</Radio>
-                                <Radio value="non">Non</Radio>
-                              </Stack>
-                            </RadioGroup>
-                          </FormControl>
-                        )}
-        
-                        <FormControl>
-                          <FormLabel>Épaisseur (cm)</FormLabel>
-                          <NumberInput
-                            min={0}
-                            value={formData.details.isolation.murs.epaisseur}
-                            onChange={(value) =>
-                              handleInputChange(
-                                "details.isolation.murs.epaisseur",
-                                parseInt(value)
-                              )
-                            }
-                          >
-                            <NumberInputField />
-                          </NumberInput>
-                        </FormControl>
-                      </>
-                    )}
-                  </VStack>
-                </CardBody>
-              </Card>
-        
-              {/* Isolation du sol - Uniquement si sous-sol présent */}
-              {formData.details.rooms.some((room) => room.type === "Sous-sol") && (
-                <Card width="100%">
-                  <CardHeader>
-                    <Heading size="sm">Isolation du Sous-Sol</Heading>
-                  </CardHeader>
-                  <CardBody>
-                    <VStack spacing={4}>
-                      <FormControl>
-                        <FormLabel>Présence d'isolation</FormLabel>
-                        <RadioGroup
-                          value={formData.details.isolation.sols?.presence ? "oui" : "non"}
-                          onChange={(value) =>
-                            handleInputChange(
-                              "details.isolation.sols.presence",
-                              value === "oui"
-                            )
-                          }
-                        >
-                          <Stack direction="row">
-                            <Radio value="oui">Oui</Radio>
-                            <Radio value="non">Non</Radio>
-                          </Stack>
-                        </RadioGroup>
-                      </FormControl>
-        
-                      {formData.details.isolation.sols?.presence && (
-                        <>
-                          <FormControl>
-                            <FormLabel>Type d'isolation</FormLabel>
-                            <Select
-                              value={formData.details.isolation.sols.type}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "details.isolation.sols.type",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              <option value="">Sélectionnez un type</option>
-                              {TYPE_ISOLATION.map((type) => (
-                                <option key={type} value={type}>
-                                  {type}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormControl>
-        
-                          <FormControl>
-                            <FormLabel>Type de pose</FormLabel>
-                            <Select
-                              value={formData.details.isolation.sols.pose}
-                              onChange={(e) =>
-                                handleInputChange(
-                                  "details.isolation.sols.pose",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              <option value="">Sélectionnez un type</option>
-                              {TYPE_ISOLATION_POSE.map((type) => (
-                                <option key={type} value={type}>
-                                  {type}
-                                </option>
-                              ))}
-                            </Select>
-                          </FormControl>
-        
-                          {formData.details.isolation.sols.pose === "En soufflage" && (
-                            <FormControl>
-                              <FormLabel>Croutage effectué ?</FormLabel>
-                              <RadioGroup
-                                value={formData.details.isolation.sols.croutageEffectue ? "oui" : "non"}
-                                onChange={(value) =>
-                                  handleInputChange(
-                                    "details.isolation.sols.croutageEffectue",
-                                    value === "oui"
-                                  )
-                                }
-                              >
-                                <Stack direction="row">
-                                  <Radio value="oui">Oui</Radio>
-                                  <Radio value="non">Non</Radio>
-                                </Stack>
-                              </RadioGroup>
-                            </FormControl>
-                          )}
-        
-                          <FormControl>
-                            <FormLabel>Épaisseur (cm)</FormLabel>
-                            <NumberInput
-                              min={0}
-                              value={formData.details.isolation.sols.epaisseur}
-                              onChange={(value) =>
-                                handleInputChange(
-                                  "details.isolation.sols.epaisseur",
-                                  parseInt(value)
-                                )
-                              }
-                            >
-                              <NumberInputField />
-                            </NumberInput>
-                          </FormControl>
-                        </>
-                      )}
-                    </VStack>
-                  </CardBody>
-                </Card>
+  return (
+    <VStack spacing={6}>
+      <Heading size="md">Configuration de l'isolation</Heading>
+
+      {/* Isolation des combles */}
+      <Card width="100%">
+        <CardHeader>
+          <Heading size="sm">Isolation des combles</Heading>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={4}>
+            <FormControl>
+              <FormLabel>Présence d'isolation</FormLabel>
+              <RadioGroup
+                value={formData.details.isolation.combles.presence ? "oui" : "non"}
+                onChange={(value) =>
+                  handleInputChange(
+                    "details.isolation.combles.presence",
+                    value === "oui"
+                  )
+                }
+              >
+                <Stack direction="row">
+                  <Radio value="oui">Oui</Radio>
+                  <Radio value="non">Non</Radio>
+                </Stack>
+              </RadioGroup>
+            </FormControl>
+
+            {formData.details.isolation.combles.presence && (
+              <>
+                <FormControl>
+                  <FormLabel>Type d'isolation</FormLabel>
+                  <Select
+                    value={formData.details.isolation.combles.type}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.isolation.combles.type",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="">Sélectionnez un type</option>
+                    {TYPE_ISOLATION.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Type de pose</FormLabel>
+                  <Select
+                    value={formData.details.isolation.combles.pose}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.isolation.combles.pose",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="">Sélectionnez un type</option>
+                    {TYPE_ISOLATION_POSE.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Épaisseur (cm)</FormLabel>
+                  <NumberInput
+                    min={0}
+                    value={formData.details.isolation.combles.epaisseur}
+                    onChange={(value) =>
+                      handleInputChange(
+                        "details.isolation.combles.epaisseur",
+                        parseInt(value)
+                      )
+                    }
+                  >
+                    <NumberInputField />
+                  </NumberInput>
+                </FormControl>
+              </>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+
+      {/* Isolation des murs */}
+      <Card width="100%">
+        <CardHeader>
+          <Heading size="sm">Isolation des murs</Heading>
+        </CardHeader>
+        <CardBody>
+          <VStack spacing={4}>
+            <FormControl>
+              <FormLabel>Présence d'isolation</FormLabel>
+              <RadioGroup
+                value={formData.details.isolation.murs.presence ? "oui" : "non"}
+                onChange={(value) =>
+                  handleInputChange(
+                    "details.isolation.murs.presence",
+                    value === "oui"
+                  )
+                }
+              >
+                <Stack direction="row">
+                  <Radio value="oui">Oui</Radio>
+                  <Radio value="non">Non</Radio>
+                </Stack>
+              </RadioGroup>
+            </FormControl>
+
+            {formData.details.isolation.murs.presence && (
+              <>
+                <FormControl>
+                  <FormLabel>Type d'isolation</FormLabel>
+                  <Select
+                    value={formData.details.isolation.murs.type}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.isolation.murs.type",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="">Sélectionnez un type</option>
+                    {TYPE_ISOLATION.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Type de pose</FormLabel>
+                  <Select
+                    value={formData.details.isolation.murs.pose}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.isolation.murs.pose",
+                        e.target.value
+                      )
+                    }
+                  >
+                    <option value="">Sélectionnez un type</option>
+                    {TYPE_ISOLATION_POSE.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </Select>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>Épaisseur (cm)</FormLabel>
+                  <NumberInput
+                    min={0}
+                    value={formData.details.isolation.murs.epaisseur}
+                    onChange={(value) =>
+                      handleInputChange(
+                        "details.isolation.murs.epaisseur",
+                        parseInt(value)
+                      )
+                    }
+                  >
+                    <NumberInputField />
+                  </NumberInput>
+                </FormControl>
+              </>
+            )}
+          </VStack>
+        </CardBody>
+      </Card>
+
+      {/* Isolation du sol - Uniquement si sous-sol présent */}
+      {formData.details.rooms.some((room) => room.type === "Sous-sol") && (
+        <Card width="100%">
+          <CardHeader>
+            <Heading size="sm">Isolation du Sous-Sol</Heading>
+          </CardHeader>
+          <CardBody>
+            <VStack spacing={4}>
+              <FormControl>
+                <FormLabel>Présence d'isolation</FormLabel>
+                <RadioGroup
+                  value={formData.details.isolation.sols?.presence ? "oui" : "non"}
+                  onChange={(value) =>
+                    handleInputChange(
+                      "details.isolation.sols.presence",
+                      value === "oui"
+                    )
+                  }
+                >
+                  <Stack direction="row">
+                    <Radio value="oui">Oui</Radio>
+                    <Radio value="non">Non</Radio>
+                  </Stack>
+                </RadioGroup>
+              </FormControl>
+
+              {formData.details.isolation.sols?.presence && (
+                <>
+                  <FormControl>
+                    <FormLabel>Type d'isolation</FormLabel>
+                    <Select
+                      value={formData.details.isolation.sols.type}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "details.isolation.sols.type",
+                          e.target.value
+                        )
+                      }
+                    >
+                      <option value="">Sélectionnez un type</option>
+                      {TYPE_ISOLATION.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormLabel>Type de pose</FormLabel>
+                    <Select
+                      value={formData.details.isolation.sols.pose}
+                      onChange={(e) =>
+                        handleInputChange(
+                          "details.isolation.sols.pose",
+                          e.target.value
+                        )
+                      }
+                    >
+                      <option value="">Sélectionnez un type</option>
+                      {TYPE_ISOLATION_POSE.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  <FormControl>
+                    <FormLabel>Épaisseur (cm)</FormLabel>
+                    <NumberInput
+                      min={0}
+                      value={formData.details.isolation.sols.epaisseur}
+                      onChange={(value) =>
+                        handleInputChange(
+                          "details.isolation.sols.epaisseur",
+                          parseInt(value)
+                        )
+                      }
+                    >
+                      <NumberInputField />
+                    </NumberInput>
+                  </FormControl>
+                </>
               )}
             </VStack>
-          );
+          </CardBody>
+        </Card>
+      )}
+    </VStack>
+  );
         
       case 8:
         return (
@@ -2589,274 +2529,348 @@ const expertiseData = {
             </Card>
           </VStack>
         );
-     
         case 12:
-  return (
-    <VStack spacing={6}>
-      <Heading size="md">État détaillé par pièce et éléments généraux</Heading>
-
-      {/* Évaluation par pièce */}
-      {formData.details.rooms.map((room, index) => (
-        <Card key={room.id} width="100%">
-          <CardHeader>
-            <Heading size="sm">
-              {room.name || `${room.type} ${index + 1}`}
-              {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
-            </Heading>
-          </CardHeader>
-          <CardBody>
-            <VStack spacing={4}>
-              {/* État des ouvertures */}
-              {room.windows.count > 0 && (
-                <StateSelector
-                  label={`État des ouvertures (${room.windows.count} ${
-                    room.windows.count > 1 ? "ouvertures" : "ouverture"
-                  })`}
-                  currentValue={room.condition.windows}
-                  onChange={(value) =>
-                    handleConditionUpdate(index, "windows", value)
-                  }
-                  fieldId={`${room.id}-windows-state`}
-                />
-              )}
-
-              {/* État du chauffage si la pièce est équipée */}
-              {formData.details.chauffage.localisations.includes(room.id) && (
-                <StateSelector
-                  label="État du chauffage"
-                  currentValue={room.condition.heating}
-                  onChange={(value) =>
-                    handleConditionUpdate(index, "heating", value)
-                  }
-                  fieldId={`${room.id}-heating-state`}
-                />
-              )}
-
-              {/* État de l'humidité */}
-              <StateSelector
-                label="État de l'humidité"
-                currentValue={room.humidityCondition}
-                onChange={(value) =>
-                  handleConditionUpdate(index, "humidity", value)
-                }
-                fieldId={`${room.id}-humidity-state`}
-                description="Évaluation de l'humidité dans la pièce"
-              />
-            </VStack>
-          </CardBody>
-        </Card>
-      ))}
-
-      {/* État général de la maison et de ses installations */}
-      <Card width="100%">
-        <CardHeader>
-          <Heading size="sm">État Général de la maison et de ses installations</Heading>
-        </CardHeader>
-        <CardBody>
-          <VStack spacing={6}>
-            {/* État de l'humidité générale */}
-            <StateSelector
-              label="État de l'humidité générale"
-              currentValue={formData.details.humidite.condition}
-              onChange={(value) =>
-                handleInputChange("details.humidite.condition", value)
-              }
-              fieldId="humidity-walls-state"
-            />
-
-            {/* État des impuretés */}
-            <StateSelector
-              label="État des impuretés"
-              currentValue={formData.details.impuretes.condition}
-              onChange={(value) =>
-                handleInputChange("details.impuretes.condition", value)
-              }
-              fieldId="impurities-state"
-            />
-
-            {/* État de la façade */}
-            <StateSelector
-              label="État de la façade"
-              currentValue={formData.details.facades[0].condition}
-              onChange={(value) =>
-                handleInputChange("details.facades[0].condition", value)
-              }
-              fieldId="facade-state"
-            />
-
-            {/* État de la toiture */}
-            <StateSelector
-              label="État de la toiture"
-              currentValue={formData.details.toiture.condition}
-              onChange={(value) =>
-                handleInputChange("details.toiture.condition", value)
-              }
-              fieldId="roof-state"
-            />
-
-            {/* État de la charpente */}
-            <StateSelector
-              label="État de la charpente"
-              currentValue={formData.details.charpente.condition}
-              onChange={(value) =>
-                handleInputChange("details.charpente.condition", value)
-              }
-              fieldId="framework-state"
-            />
-
-            {/* État de la ventilation */}
-            <StateSelector
-              label="État de la ventilation"
-              currentValue={formData.details.ventilation.condition}
-              onChange={(value) =>
-                handleInputChange("details.ventilation.condition", value)
-              }
-              fieldId="ventilation-state"
-            />
-
-            {/* État des normes électriques */}
-            <StateSelector
-              label="État des normes électriques"
-              currentValue={formData.details.electrical.condition}
-              onChange={(value) =>
-                handleInputChange("details.electrical.condition", value)
-              }
-              fieldId="electrical-state"
-            />
-
-            {/* État des isolations si présentes */}
-            {formData.details.isolation.combles.presence && (
-              <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
-                <VStack spacing={4} align="stretch">
-                  <StateSelector
-                    label="État de l'isolation des combles"
-                    currentValue={formData.details.isolation.combles.condition}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.isolation.combles.condition",
-                        value
-                      )
-                    }
-                    fieldId="isolation-combles-state"
-                  />
-
-                  <FormControl id="condensation-presence">
-                    <FormLabel>Présence de condensation dans les combles ?</FormLabel>
-                    <RadioGroup
-                      value={formData.details.isolation.combles.hasCondensation ? "oui" : "non"}
-                      onChange={(value) =>
-                        handleInputChange(
-                          "details.isolation.combles.hasCondensation",
-                          value === "oui"
-                        )
-                      }
-                    >
-                      <Stack direction="row">
-                        <Radio value="oui">Oui</Radio>
-                        <Radio value="non">Non</Radio>
-                      </Stack>
-                    </RadioGroup>
-                  </FormControl>
-
-                  {formData.details.isolation.combles.hasCondensation && (
-                    <FormControl id="condensation-rate">
-                      <FormLabel>Taux de condensation (%)</FormLabel>
-                      <NumberInput
-                        min={0}
-                        max={100}
-                        value={formData.details.isolation.combles.humidityRate}
+          return (
+            <VStack spacing={6}>
+              <Heading size="md">État détaillé par pièce et éléments généraux</Heading>
+        
+              {/* Évaluation par pièce */}
+              {formData.details.rooms.map((room, index) => (
+                <Card key={room.id} width="100%">
+                  <CardHeader>
+                    <Heading size="sm">
+                      {room.name || `${room.type} ${index + 1}`}
+                      {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
+                    </Heading>
+                  </CardHeader>
+                  <CardBody>
+                    <VStack spacing={4}>
+                      {/* État des ouvertures */}
+                      {room.windows.count > 0 && (
+                        <StateSelector
+                          label={`État des ouvertures (${room.windows.count} ${
+                            room.windows.count > 1 ? "ouvertures" : "ouverture"
+                          })`}
+                          currentValue={room.condition.windows}
+                          onChange={(value) =>
+                            handleConditionUpdate(index, "windows", value)
+                          }
+                          fieldId={`${room.id}-windows-state`}
+                        />
+                      )}
+        
+                      {/* État du chauffage si la pièce est équipée */}
+                      {formData.details.chauffage.localisations.includes(room.id) && (
+                        <StateSelector
+                          label="État du chauffage"
+                          currentValue={room.condition.heating}
+                          onChange={(value) =>
+                            handleConditionUpdate(index, "heating", value)
+                          }
+                          fieldId={`${room.id}-heating-state`}
+                        />
+                      )}
+        
+                      {/* État de l'humidité */}
+                      <StateSelector
+                        label="État de l'humidité"
+                        currentValue={room.humidityCondition}
                         onChange={(value) =>
-                          handleInputChange(
-                            "details.isolation.combles.humidityRate",
-                            parseInt(value)
-                          )
+                          handleConditionUpdate(index, "humidity", value)
                         }
-                      >
-                        <NumberInputField />
-                      </NumberInput>
-                    </FormControl>
-                  )}
-                </VStack>
-              </Box>
-            )}
-
-            {formData.details.isolation.murs.presence && (
-              <StateSelector
-                label="État de l'isolation des murs"
-                currentValue={formData.details.isolation.murs.condition}
-                onChange={(value) =>
-                  handleInputChange(
-                    "details.isolation.murs.condition",
-                    value
-                  )
-                }
-                fieldId="isolation-murs-state"
-              />
-            )}
-
-            {formData.details.isolation.sols?.presence && (
-              <StateSelector
-                label="État de l'isolation du sous-sol"
-                currentValue={formData.details.isolation.sols.condition}
-                onChange={(value) =>
-                  handleInputChange(
-                    "details.isolation.sols.condition",
-                    value
-                  )
-                }
-                fieldId="isolation-sols-state"
-              />
-            )}
-
-            {/* Protection incendie */}
-            <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
-              <Text fontWeight="bold" fontSize="lg" mb={4}>
-                Protection incendie
-              </Text>
-              <Stack spacing={3}>
-                <Checkbox
-                  isChecked={formData.details.securiteIncendie.bouleIncendie}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.securiteIncendie.bouleIncendie",
-                      e.target.checked
-                    )
-                  }
-                  id="boule-incendie"
-                >
-                  Boule incendie
-                </Checkbox>
-                <Checkbox
-                  isChecked={formData.details.securiteIncendie.extincteur}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.securiteIncendie.extincteur",
-                      e.target.checked
-                    )
-                  }
-                  id="extincteur"
-                >
-                  Extincteur
-                </Checkbox>
-                <Checkbox
-                  isChecked={formData.details.securiteIncendie.detecteurFumee}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "details.securiteIncendie.detecteurFumee",
-                      e.target.checked
-                    )
-                  }
-                  id="detecteur-fumee"
-                >
-                  Détecteur de fumée
-                </Checkbox>
-              </Stack>
-            </Box>
-          </VStack>
-        </CardBody>
-      </Card>
-    </VStack>
-  );     
+                        fieldId={`${room.id}-humidity-state`}
+                        description="Évaluation de l'humidité dans la pièce"
+                      />
+                    </VStack>
+                  </CardBody>
+                </Card>
+              ))}
+        
+              {/* État général de la maison et de ses installations */}
+              <Card width="100%">
+                <CardHeader>
+                  <Heading size="sm">État Général de la maison et de ses installations</Heading>
+                </CardHeader>
+                <CardBody>
+                  <VStack spacing={6}>
+                    {/* État de l'humidité générale */}
+                    <StateSelector
+                      label="État de l'humidité générale"
+                      currentValue={formData.details.humidite.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.humidite.condition", value)
+                      }
+                      fieldId="humidity-walls-state"
+                    />
+        
+                    {/* État des impuretés */}
+                    <StateSelector
+                      label="État des impuretés"
+                      currentValue={formData.details.impuretes.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.impuretes.condition", value)
+                      }
+                      fieldId="impurities-state"
+                    />
+        
+                    {/* État de la façade */}
+                    <StateSelector
+                      label="État de la façade"
+                      currentValue={formData.details.facades[0].condition}
+                      onChange={(value) =>
+                        handleInputChange("details.facades[0].condition", value)
+                      }
+                      fieldId="facade-state"
+                    />
+        
+                    {/* État de la toiture */}
+                    <StateSelector
+                      label="État de la toiture"
+                      currentValue={formData.details.toiture.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.toiture.condition", value)
+                      }
+                      fieldId="roof-state"
+                    />
+        
+                    {/* État de la charpente */}
+                    <StateSelector
+                      label="État de la charpente"
+                      currentValue={formData.details.charpente.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.charpente.condition", value)
+                      }
+                      fieldId="framework-state"
+                    />
+        
+                    {/* État de la ventilation */}
+                    <StateSelector
+                      label="État de la ventilation"
+                      currentValue={formData.details.ventilation.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.ventilation.condition", value)
+                      }
+                      fieldId="ventilation-state"
+                    />
+        
+                    {/* État des normes électriques */}
+                    <StateSelector
+                      label="État des normes électriques"
+                      currentValue={formData.details.electrical.condition}
+                      onChange={(value) =>
+                        handleInputChange("details.electrical.condition", value)
+                      }
+                      fieldId="electrical-state"
+                    />
+        
+                    {/* État des isolations si présentes */}
+                    {formData.details.isolation.combles.presence && (
+                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                        <VStack spacing={4} align="stretch">
+                          <StateSelector
+                            label="État de l'isolation des combles"
+                            currentValue={formData.details.isolation.combles.condition}
+                            onChange={(value) =>
+                              handleInputChange(
+                                "details.isolation.combles.condition",
+                                value
+                              )
+                            }
+                            fieldId="isolation-combles-state"
+                          />
+        
+                          {formData.details.isolation.combles.pose === "En soufflage" && (
+                            <FormControl>
+                              <FormLabel>
+                                Le croutage obligatoire pour l'isolation {formData.details.isolation.combles.type} des Combles avec une pose en soufflage a été effectué ?
+                              </FormLabel>
+                              <RadioGroup
+                                value={formData.details.isolation.combles.croutageEffectue ? "oui" : "non"}
+                                onChange={(value) =>
+                                  handleInputChange(
+                                    "details.isolation.combles.croutageEffectue",
+                                    value === "oui"
+                                  )
+                                }
+                              >
+                                <Stack direction="row">
+                                  <Radio value="oui">Oui</Radio>
+                                  <Radio value="non">Non</Radio>
+                                </Stack>
+                              </RadioGroup>
+                            </FormControl>
+                          )}
+        
+                          <FormControl>
+                            <FormLabel>Présence de condensation dans les combles ?</FormLabel>
+                            <RadioGroup
+                              value={formData.details.isolation.combles.hasCondensation ? "oui" : "non"}
+                              onChange={(value) =>
+                                handleInputChange(
+                                  "details.isolation.combles.hasCondensation",
+                                  value === "oui"
+                                )
+                              }
+                            >
+                              <Stack direction="row">
+                                <Radio value="oui">Oui</Radio>
+                                <Radio value="non">Non</Radio>
+                              </Stack>
+                            </RadioGroup>
+                          </FormControl>
+        
+                          {formData.details.isolation.combles.hasCondensation && (
+                            <FormControl>
+                              <FormLabel>Taux de condensation (%)</FormLabel>
+                              <NumberInput
+                                min={0}
+                                max={100}
+                                value={formData.details.isolation.combles.humidityRate}
+                                onChange={(value) =>
+                                  handleInputChange(
+                                    "details.isolation.combles.humidityRate",
+                                    parseInt(value)
+                                  )
+                                }
+                              >
+                                <NumberInputField />
+                              </NumberInput>
+                            </FormControl>
+                          )}
+                        </VStack>
+                      </Box>
+                    )}
+        
+                    {formData.details.isolation.murs.presence && (
+                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                        <VStack spacing={4} align="stretch">
+                          <StateSelector
+                            label="État de l'isolation des murs"
+                            currentValue={formData.details.isolation.murs.condition}
+                            onChange={(value) =>
+                              handleInputChange(
+                                "details.isolation.murs.condition",
+                                value
+                              )
+                            }
+                            fieldId="isolation-murs-state"
+                          />
+        
+                          {formData.details.isolation.murs.pose === "En soufflage" && (
+                            <FormControl>
+                              <FormLabel>
+                                Le croutage obligatoire pour l'isolation {formData.details.isolation.murs.type} des Murs avec une pose en soufflage a été effectué ?
+                              </FormLabel>
+                              <RadioGroup
+                                value={formData.details.isolation.murs.croutageEffectue ? "oui" : "non"}
+                                onChange={(value) =>
+                                  handleInputChange(
+                                    "details.isolation.murs.croutageEffectue",
+                                    value === "oui"
+                                  )
+                                }
+                              >
+                                <Stack direction="row">
+                                  <Radio value="oui">Oui</Radio>
+                                  <Radio value="non">Non</Radio>
+                                </Stack>
+                              </RadioGroup>
+                            </FormControl>
+                          )}
+                        </VStack>
+                      </Box>
+                    )}
+        
+                    {formData.details.isolation.sols?.presence && (
+                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                        <VStack spacing={4} align="stretch">
+                          <StateSelector
+                            label="État de l'isolation du sous-sol"
+                            currentValue={formData.details.isolation.sols.condition}
+                            onChange={(value) =>
+                              handleInputChange(
+                                "details.isolation.sols.condition",
+                                value
+                              )
+                            }
+                            fieldId="isolation-sols-state"
+                          />
+        
+                          {formData.details.isolation.sols.pose === "En soufflage" && (
+                            <FormControl>
+                              <FormLabel>
+                                Le croutage obligatoire pour l'isolation {formData.details.isolation.sols.type} du Sous-sol avec une pose en soufflage a été effectué ?
+                              </FormLabel>
+                              <RadioGroup
+                                value={formData.details.isolation.sols.croutageEffectue ? "oui" : "non"}
+                                onChange={(value) =>
+                                  handleInputChange(
+                                    "details.isolation.sols.croutageEffectue",
+                                    value === "oui"
+                                  )
+                                }
+                              >
+                                <Stack direction="row">
+                                  <Radio value="oui">Oui</Radio>
+                                  <Radio value="non">Non</Radio>
+                                </Stack>
+                              </RadioGroup>
+                            </FormControl>
+                          )}
+                        </VStack>
+                      </Box>
+                    )}
+        
+                    {/* Protection incendie */}
+                    <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
+                      <Text fontWeight="bold" fontSize="lg" mb={4}>
+                        Protection incendie
+                      </Text>
+                      <Stack spacing={3}>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.bouleIncendie}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.bouleIncendie",
+                              e.target.checked
+                            )
+                          }
+                          id="boule-incendie"
+                        >
+                          Boule incendie
+                        </Checkbox>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.extincteur}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.extincteur",
+                              e.target.checked
+                            )
+                          }
+                          id="extincteur"
+                        >
+                          Extincteur
+                        </Checkbox>
+                        <Checkbox
+                          isChecked={formData.details.securiteIncendie.detecteurFumee}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.securiteIncendie.detecteurFumee",
+                              e.target.checked
+                            )
+                          }
+                          id="detecteur-fumee"
+                        >
+                          Détecteur de fumée
+                        </Checkbox>
+                      </Stack>
+                    </Box>
+                  </VStack>
+                </CardBody>
+              </Card>
+            </VStack>
+          );
+    
       case 13:
         return (
           <VStack spacing={6}>
