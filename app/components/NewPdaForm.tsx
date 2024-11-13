@@ -1,5 +1,5 @@
 // components/NewPdaForm.tsx
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Button,
@@ -15,10 +15,9 @@ import {
   List,
   ListItem,
   Flex,
-} from '@chakra-ui/react';
-import { useAuth } from '../lib/auth';
-import PhoneInput from 'react-phone-input-2';
-import 'react-phone-input-2/lib/style.css';
+} from "@chakra-ui/react";
+import { useAuth } from "../lib/auth";
+
 
 interface FormData {
   details: {
@@ -43,27 +42,31 @@ export default function NewPdaForm() {
   const [formData, setFormData] = useState<FormData>({
     details: {
       beneficiary: {
-        name: '',
-        address: '',
-        phone: '',
+        name: "",
+        address: "",
+        phone: "",
       },
-      fiscalIncome: '',
-      typeOfImprovement: '',
-      estimatedCost: '',
-      grantAmount: '',
+      fiscalIncome: "",
+      typeOfImprovement: "",
+      estimatedCost: "",
+      grantAmount: "",
     },
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [addressSuggestions, setAddressSuggestions] = useState<AddressSuggestion[]>([]);
-  const [grantAmount, setGrantAmount] = useState<string>('');
+  const [addressSuggestions, setAddressSuggestions] = useState<
+    AddressSuggestion[]
+  >([]);
+  const [grantAmount, setGrantAmount] = useState<string>("");
   const toast = useToast();
   const { getAuthHeaders, user } = useAuth();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    const keys = name.split('.');
-    setFormData(prevData => {
+    const keys = name.split(".");
+    setFormData((prevData) => {
       let newData = { ...prevData };
       let current: any = newData;
       for (let i = 0; i < keys.length - 1; i++) {
@@ -73,8 +76,8 @@ export default function NewPdaForm() {
       current[keys[keys.length - 1]] = value;
       return newData;
     });
-  
-    if (name === 'details.beneficiary.address') {
+
+    if (name === "details.beneficiary.address") {
       fetchAddressSuggestions(value);
     }
   };
@@ -82,14 +85,23 @@ export default function NewPdaForm() {
   const fetchAddressSuggestions = async (input: string) => {
     if (input.length > 2) {
       try {
-        const response = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(input)}&limit=5`);
+        const response = await fetch(
+          `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(
+            input
+          )}&limit=5`
+        );
         const data = await response.json();
-        setAddressSuggestions(data.features.map((feature: any) => ({
-          label: feature.properties.label,
-          context: feature.properties.context,
-        })));
+        setAddressSuggestions(
+          data.features.map((feature: any) => ({
+            label: feature.properties.label,
+            context: feature.properties.context,
+          }))
+        );
       } catch (error) {
-        console.error('Erreur lors de la récupération des suggestions d\'adresse:', error);
+        console.error(
+          "Erreur lors de la récupération des suggestions d'adresse:",
+          error
+        );
       }
     } else {
       setAddressSuggestions([]);
@@ -97,34 +109,45 @@ export default function NewPdaForm() {
   };
 
   const handleAddressSelect = (address: string) => {
-    setFormData(prevData => ({
+    setFormData((prevData) => ({
       ...prevData,
       details: {
         ...prevData.details,
         beneficiary: {
           ...prevData.details.beneficiary,
           address: address,
-        }
-      }
+        },
+      },
     }));
     setAddressSuggestions([]);
   };
 
   const validateForm = () => {
     const { details } = formData;
-    if (!details.beneficiary.name || !details.beneficiary.address || !details.beneficiary.phone ||
-        !details.fiscalIncome || !details.typeOfImprovement || !details.estimatedCost) {
-      throw new Error('Tous les champs sont requis');
+    if (
+      !details.beneficiary.name ||
+      !details.beneficiary.address ||
+      !details.beneficiary.phone ||
+      !details.fiscalIncome ||
+      !details.typeOfImprovement ||
+      !details.estimatedCost
+    ) {
+      throw new Error("Tous les champs sont requis");
     }
-    
-    if (isNaN(Number(details.fiscalIncome)) || isNaN(Number(details.estimatedCost))) {
-      throw new Error('Les montants doivent être des nombres valides');
+
+    if (
+      isNaN(Number(details.fiscalIncome)) ||
+      isNaN(Number(details.estimatedCost))
+    ) {
+      throw new Error("Les montants doivent être des nombres valides");
     }
   };
 
   const generatePdaTitle = () => {
     const now = new Date();
-    return `PDA ${now.toLocaleDateString('fr-FR')} - ${formData.details.beneficiary.name}`;
+    return `PDA ${now.toLocaleDateString("fr-FR")} - ${
+      formData.details.beneficiary.name
+    }`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -136,32 +159,33 @@ export default function NewPdaForm() {
 
       const pdaTitle = generatePdaTitle();
       const estimatedCost = parseFloat(formData.details.estimatedCost);
-      const calculatedGrantAmount = Math.round(estimatedCost * 0.2857 * 100) / 100;
+      const calculatedGrantAmount =
+        Math.round(estimatedCost * 0.2857 * 100) / 100;
 
       const dataToSend = {
         title: pdaTitle,
-        status: 'En cours',
+        status: "En cours",
         details: {
           beneficiary: {
             name: formData.details.beneficiary.name,
             address: formData.details.beneficiary.address,
-            phone: formData.details.beneficiary.phone
+            phone: formData.details.beneficiary.phone,
           },
           typeOfImprovement: formData.details.typeOfImprovement,
           fiscalIncome: parseFloat(formData.details.fiscalIncome),
           estimatedCost: estimatedCost,
-          grantAmount: calculatedGrantAmount
+          grantAmount: calculatedGrantAmount,
         },
-        createdBy: user?.id // Ajout de l'ID de l'utilisateur connecté
+        createdBy: user?.id, // Ajout de l'ID de l'utilisateur connecté
       };
 
       // Simuler un délai pour le test d'éligibilité
-      await new Promise(resolve => setTimeout(resolve, 50000));
+      await new Promise((resolve) => setTimeout(resolve, 50000));
 
-      const response = await fetch('/api/pda', {
-        method: 'POST',
+      const response = await fetch("/api/pda", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...getAuthHeaders(),
         },
         body: JSON.stringify(dataToSend),
@@ -169,15 +193,17 @@ export default function NewPdaForm() {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Erreur lors de la création du plan d\'aide');
+        throw new Error(
+          errorData.message || "Erreur lors de la création du plan d'aide"
+        );
       }
 
       const data = await response.json();
-      console.log('PDA créé avec succès:', data);
+      console.log("PDA créé avec succès:", data);
 
       setGrantAmount(calculatedGrantAmount.toString());
       setIsSuccess(true);
-      
+
       toast({
         title: "Succès",
         description: "Le plan d'aide a été créé avec succès",
@@ -186,10 +212,13 @@ export default function NewPdaForm() {
         isClosable: true,
       });
     } catch (error) {
-      console.error('Erreur lors de la création du PDA:', error);
+      console.error("Erreur lors de la création du PDA:", error);
       toast({
         title: "Erreur",
-        description: error instanceof Error ? error.message : "Une erreur est survenue lors de la création du plan d'aide",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Une erreur est survenue lors de la création du plan d'aide",
         status: "error",
         duration: 5000,
         isClosable: true,
@@ -248,32 +277,27 @@ export default function NewPdaForm() {
       <VStack spacing={4} align="stretch">
         <FormControl isRequired>
           <FormLabel>Nom du bénéficiaire</FormLabel>
-          <Input 
-            name="details.beneficiary.name" 
-            value={formData.details.beneficiary.name} 
+          <Input
+            name="details.beneficiary.name"
+            value={formData.details.beneficiary.name}
             onChange={handleChange}
           />
         </FormControl>
 
         <FormControl isRequired>
           <FormLabel>Adresse du bénéficiaire</FormLabel>
-          <Input 
-            name="details.beneficiary.address" 
-            value={formData.details.beneficiary.address} 
-            onChange={handleChange} 
+          <Input
+            name="details.beneficiary.address"
+            value={formData.details.beneficiary.address}
+            onChange={handleChange}
           />
           {addressSuggestions.length > 0 && (
-            <List 
-              mt={2} 
-              borderWidth={1} 
-              borderRadius="md" 
-              boxShadow="sm"
-            >
+            <List mt={2} borderWidth={1} borderRadius="md" boxShadow="sm">
               {addressSuggestions.map((suggestion, index) => (
-                <ListItem 
-                  key={index} 
-                  p={2} 
-                  _hover={{ bg: "gray.100" }} 
+                <ListItem
+                  key={index}
+                  p={2}
+                  _hover={{ bg: "gray.100" }}
                   cursor="pointer"
                   onClick={() => handleAddressSelect(suggestion.label)}
                 >
@@ -285,47 +309,41 @@ export default function NewPdaForm() {
         </FormControl>
 
         <FormControl isRequired>
-  <FormLabel>Téléphone du bénéficiaire</FormLabel>
-  <PhoneInput
-    country={'fr'}
-    value={formData.details.beneficiary.phone}
-    onChange={(phone) => {
-      setFormData(prev => ({
-        ...prev,
-        details: {
-          ...prev.details,
-          beneficiary: {
-            ...prev.details.beneficiary,
-            phone: phone
-          }
-        }
-      }));
-    }}
-    inputStyle={{ width: "100%" }}
-    buttonStyle={{ borderRadius: '0.375rem 0 0 0.375rem' }}
-    specialLabel=""
-    enableSearch={true}
-    searchPlaceholder="Rechercher un pays..."
-    searchNotFound="Pays non trouvé"
-    preferredCountries={['fr', 'be', 'ch', 'lu']}
-  />
-</FormControl>
+          <FormLabel>Téléphone du bénéficiaire</FormLabel>
+          <Input
+            type="tel"
+            value={formData.details.beneficiary.phone}
+            onChange={(e) => {
+              setFormData((prev) => ({
+                ...prev,
+                details: {
+                  ...prev.details,
+                  beneficiary: {
+                    ...prev.details.beneficiary,
+                    phone: e.target.value,
+                  },
+                },
+              }));
+            }}
+            placeholder="0XXXXXXXXX"
+          />
+        </FormControl>
 
         <FormControl isRequired>
           <FormLabel>Revenu fiscal de référence</FormLabel>
-          <Input 
-            name="details.fiscalIncome" 
-            value={formData.details.fiscalIncome} 
-            onChange={handleChange} 
-            type="number" 
+          <Input
+            name="details.fiscalIncome"
+            value={formData.details.fiscalIncome}
+            onChange={handleChange}
+            type="number"
           />
         </FormControl>
 
         <FormControl isRequired>
           <FormLabel>Type d'amélioration</FormLabel>
-          <Select 
-            name="details.typeOfImprovement" 
-            value={formData.details.typeOfImprovement} 
+          <Select
+            name="details.typeOfImprovement"
+            value={formData.details.typeOfImprovement}
             onChange={handleChange}
           >
             <option value="">Sélectionnez un type</option>
@@ -339,11 +357,11 @@ export default function NewPdaForm() {
 
         <FormControl isRequired>
           <FormLabel>Coût estimé de la prestation</FormLabel>
-          <Input 
-            name="details.estimatedCost" 
-            value={formData.details.estimatedCost} 
-            onChange={handleChange} 
-            type="number" 
+          <Input
+            name="details.estimatedCost"
+            value={formData.details.estimatedCost}
+            onChange={handleChange}
+            type="number"
           />
         </FormControl>
 

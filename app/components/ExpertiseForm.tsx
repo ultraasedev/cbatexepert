@@ -50,8 +50,7 @@ import {
 import { FaPlus, FaTrash, FaHome, FaBuilding } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/app/lib/auth";
-import PhoneInput from "react-phone-input-2";
-import "react-phone-input-2/lib/style.css";
+
 import type {
   Expertise,
   RoomEvaluation,
@@ -257,7 +256,7 @@ const defaultIsolation: BaseIsolation = {
   pose: "",
   epaisseur: 0,
   condition: "Moyen",
-  croutageEffectue: false
+  croutageEffectue: false,
 };
 
 const defaultCombleIsolation: CombleIsolation = {
@@ -283,12 +282,14 @@ const initialFormData: FormData = {
       floors: 0,
     },
     rooms: [],
-    facades: [{
-      type: "Enduit",
-      thickness: 0,
-      lastMaintenance: new Date().toISOString().split('T')[0],
-      condition: "Moyen"
-    }],
+    facades: [
+      {
+        type: "Enduit",
+        thickness: 0,
+        lastMaintenance: new Date().toISOString().split("T")[0],
+        condition: "Moyen",
+      },
+    ],
     electrical: {
       type: "Mono",
       installationYear: 0,
@@ -320,7 +321,7 @@ const initialFormData: FormData = {
         hasCondensation: false,
         condensationLocations: [],
         humidityRate: 0,
-        etatCombles: "Moyen"
+        etatCombles: "Moyen",
       },
       murs: {
         presence: false,
@@ -328,7 +329,7 @@ const initialFormData: FormData = {
         pose: "",
         epaisseur: 0,
         condition: "Moyen",
-        croutageEffectue: false
+        croutageEffectue: false,
       },
       sols: {
         presence: false,
@@ -336,7 +337,7 @@ const initialFormData: FormData = {
         pose: "",
         epaisseur: 0,
         condition: "Moyen",
-        croutageEffectue: false
+        croutageEffectue: false,
       },
     },
     framework: {
@@ -495,7 +496,7 @@ const transformInitialData = (data: Expertise | null): FormData => {
           pose: data.isolation?.murs?.pose || "",
           epaisseur: data.isolation?.murs?.epaisseur || 0,
           condition: data.isolation?.murs?.condition || "Moyen",
-          croutageEffectue: data.isolation?.murs?.croutageEffectue || false 
+          croutageEffectue: data.isolation?.murs?.croutageEffectue || false,
         },
         sols: data.isolation?.sols
           ? {
@@ -504,7 +505,7 @@ const transformInitialData = (data: Expertise | null): FormData => {
               pose: data.isolation.sols.pose || "",
               epaisseur: data.isolation.sols.epaisseur || 0,
               condition: data.isolation.sols.condition || "Moyen",
-              croutageEffectue: data.isolation.sols.croutageEffectue || false
+              croutageEffectue: data.isolation.sols.croutageEffectue || false,
             }
           : undefined,
       },
@@ -622,15 +623,15 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
   const handleInputChange = (path: string, value: unknown): void => {
     setFormData((prev) => {
       const newData = { ...prev };
-      const keys = path.split('.');
+      const keys = path.split(".");
       let current: any = newData;
-      
+
       for (let i = 0; i < keys.length - 1; i++) {
         const key = keys[i];
         // Gestion des indices de tableau
-        if (key.includes('[')) {
-          const [arrayName, indexStr] = key.split('[');
-          const index = parseInt(indexStr.replace(']', ''));
+        if (key.includes("[")) {
+          const [arrayName, indexStr] = key.split("[");
+          const index = parseInt(indexStr.replace("]", ""));
           if (!current[arrayName]) {
             current[arrayName] = [];
           }
@@ -640,7 +641,7 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           current = current[arrayName][index];
           continue;
         }
-        
+
         // Création du chemin s'il n'existe pas
         if (!(key in current)) {
           current[key] = {};
@@ -648,14 +649,14 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
         current[key] = { ...current[key] };
         current = current[key];
       }
-  
+
       const lastKey = keys[keys.length - 1];
       // Si le dernier niveau n'existe pas, on le crée
-      if (typeof current !== 'object' || current === null) {
+      if (typeof current !== "object" || current === null) {
         current = {};
       }
       current[lastKey] = value;
-      
+
       return newData;
     });
   };
@@ -912,67 +913,70 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     }
   };
 
- const calculateNewScore = (): void => {
-  const conditions: ConditionType[] = [];
+  const calculateNewScore = (): void => {
+    const conditions: ConditionType[] = [];
 
-  // Collecter toutes les conditions
-  // Conditions des pièces
-  formData.details.rooms.forEach((room) => {
-    if (room.condition.windows !== "Moyen") conditions.push(room.condition.windows);
-    if (room.condition.heating !== "Moyen") conditions.push(room.condition.heating);
-    if (room.humidityCondition !== "Moyen") conditions.push(room.humidityCondition);
-  });
+    // Collecter toutes les conditions
+    // Conditions des pièces
+    formData.details.rooms.forEach((room) => {
+      if (room.condition.windows !== "Moyen")
+        conditions.push(room.condition.windows);
+      if (room.condition.heating !== "Moyen")
+        conditions.push(room.condition.heating);
+      if (room.humidityCondition !== "Moyen")
+        conditions.push(room.humidityCondition);
+    });
 
-  // Conditions des éléments généraux
-  conditions.push(formData.details.chauffage.condition);
-  conditions.push(formData.details.ventilation.condition);
-  conditions.push(formData.details.humidite.condition);
-  conditions.push(formData.details.impuretes.condition);
-  conditions.push(formData.details.facades[0].condition);
-  conditions.push(formData.details.roof.condition);
-  conditions.push(formData.details.framework.condition);
-  conditions.push(formData.details.electrical.condition);
+    // Conditions des éléments généraux
+    conditions.push(formData.details.chauffage.condition);
+    conditions.push(formData.details.ventilation.condition);
+    conditions.push(formData.details.humidite.condition);
+    conditions.push(formData.details.impuretes.condition);
+    conditions.push(formData.details.facades[0].condition);
+    conditions.push(formData.details.roof.condition);
+    conditions.push(formData.details.framework.condition);
+    conditions.push(formData.details.electrical.condition);
 
-  // Conditions des isolations
-  if (formData.details.isolation.combles.presence) {
-    conditions.push(formData.details.isolation.combles.condition);
-  }
-  if (formData.details.isolation.murs.presence) {
-    conditions.push(formData.details.isolation.murs.condition);
-  }
-  if (formData.details.isolation.sols?.presence) {
-    conditions.push(formData.details.isolation.sols.condition);
-  }
+    // Conditions des isolations
+    if (formData.details.isolation.combles.presence) {
+      conditions.push(formData.details.isolation.combles.condition);
+    }
+    if (formData.details.isolation.murs.presence) {
+      conditions.push(formData.details.isolation.murs.condition);
+    }
+    if (formData.details.isolation.sols?.presence) {
+      conditions.push(formData.details.isolation.sols.condition);
+    }
 
-  // Déterminer la condition globale selon les nouvelles règles
-  let newScore = 3; // Score par défaut (Moyen)
-  let condition: "Favorable" | "Correct" | "Critique" = "Correct";
+    // Déterminer la condition globale selon les nouvelles règles
+    let newScore = 3; // Score par défaut (Moyen)
+    let condition: "Favorable" | "Correct" | "Critique" = "Correct";
 
-  const hasBad = conditions.some(cond => cond === "Mauvais");
-  const hasGood = conditions.some(cond => cond === "Bon");
-  const hasMedium = conditions.some(cond => cond === "Moyen");
-  const allGood = conditions.every(cond => cond === "Bon");
+    const hasBad = conditions.some((cond) => cond === "Mauvais");
+    const hasGood = conditions.some((cond) => cond === "Bon");
+    const hasMedium = conditions.some((cond) => cond === "Moyen");
+    const allGood = conditions.every((cond) => cond === "Bon");
 
-  if (hasBad) {
-    newScore = 1;
-    condition = "Critique";
-  } else if (allGood) {
-    newScore = 5;
-    condition = "Favorable";
-  } else {
-    // Si on a un mix de Bon et Moyen, ou tout est Moyen
-    newScore = 3;
-    condition = "Correct";
-  }
+    if (hasBad) {
+      newScore = 1;
+      condition = "Critique";
+    } else if (allGood) {
+      newScore = 5;
+      condition = "Favorable";
+    } else {
+      // Si on a un mix de Bon et Moyen, ou tout est Moyen
+      newScore = 3;
+      condition = "Correct";
+    }
 
-  setEvaluationScore(newScore);
+    setEvaluationScore(newScore);
 
-  handleInputChange("evaluations.global", {
-    score: newScore,
-    condition,
-    comment: generateGlobalComment(newScore)
-  });
-};
+    handleInputChange("evaluations.global", {
+      score: newScore,
+      condition,
+      comment: generateGlobalComment(newScore),
+    });
+  };
 
   const generateGlobalComment = (score: number): string => {
     let comment = "";
@@ -1136,240 +1140,257 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
     };
   };
 
-const handleSubmit = async (e: React.FormEvent): Promise<void> => {
-  e.preventDefault();
-  if (!user) {
-    router.push("/login");
-    return;
-  }
-
-  setLoading(true);
-  try {
-    calculateNewScore();
-
-    const validation = validateExpertiseData(formData);
-    if (!validation.isValid) {
-      throw new Error(`Validation échouée: ${validation.errors.join(", ")}`);
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    if (!user) {
+      router.push("/login");
+      return;
     }
 
-    // Construction des données pour l'API
-    // Dans la fonction handleSubmit du ExpertiseForm.tsx
+    setLoading(true);
+    try {
+      calculateNewScore();
 
-const expertiseData = {
-  // Informations de base
-  typeLogement: formData.typeLogement,
-
-  // Informations du bénéficiaire
-  beneficiaire: {
-    nom: `${formData.details.beneficiary.firstName} ${formData.details.beneficiary.lastName}`,
-    adresse: formData.details.beneficiary.address,
-    telephone: formData.details.beneficiary.phone
-  },
-
-  // Détails généraux
-  details: {
-    anneeConstruction: Number(formData.details.construction.year),
-    superficie: Number(formData.details.construction.area),
-    nombreEtages: Number(formData.details.construction.floors)
-  },
-
-  // Ouvertures
-  ouvertures: {
-    nombre: formData.details.rooms[0]?.windows?.count || 0,
-    typeVitrage: formData.details.rooms[0]?.windows?.type || 'simple',
-    etat: formData.details.rooms[0]?.windows?.condition || 'Moyen',
-    anneeInstallation: formData.details.rooms[0]?.windows?.installationYear || new Date().getFullYear()
-  },
-
-  // Chauffage
-  chauffage: {
-    types: formData.details.chauffage.types || [],
-    nombreRadiateurs: formData.details.chauffage.nombreRadiateurs || 0,
-    localisations: formData.details.chauffage.localisations || [],
-    etat: formData.details.chauffage.condition || 'Moyen',
-    anneeInstallation: formData.details.chauffage.installationYear || new Date().getFullYear()
-  },
-
-  // Humidité
-  humidite: {
-    taux: 0,
-    etat: formData.details.humidite?.condition || 'Moyen',
-    tauxParPiece: formData.details.humidite?.tauxParPiece || {}
-  },
-
-  // Façade
-  facade: {
-    type: formData.details.facades[0]?.type || 'Enduit',
-    epaisseurMurs: Number(formData.details.facades[0]?.thickness) || 0,
-    dernierEntretien: formData.details.facades[0]?.lastMaintenance 
-      ? new Date(formData.details.facades[0].lastMaintenance).getTime()
-      : new Date().getTime(),
-    etat: formData.details.facades[0]?.condition || 'Moyen'
-  },
-
-  // Tableau électrique
-  tableauElectrique: {
-    type: formData.details.electrical.type || 'Mono',
-    anneePose: Number(formData.details.electrical.installationYear) || new Date().getFullYear(),
-    presenceLinky: formData.details.electrical.hasLinky || false,
-    auxNormes: formData.details.electrical.upToStandards || false,
-    etat: formData.details.electrical.condition || 'Moyen'
-  },
-
-  // Ventilation
-  ventilation: {
-    types: formData.details.ventilation.types || [],
-    localisations: formData.details.ventilation.localisations || [],
-    ventilationNaturelle: true,
-    anneePose: formData.details.ventilation.installationYear || new Date().getFullYear(),
-    etat: formData.details.ventilation.condition || 'Moyen'
-  },
-
-  // Isolation
-  isolation: {
-    combles: {
-      presence: formData.details.isolation.combles?.presence || false,
-      type: formData.details.isolation.combles?.type || '',
-      pose: formData.details.isolation.combles?.pose || 'En rouleau',
-      epaisseur: formData.details.isolation.combles?.epaisseur || 0,
-      etat: formData.details.isolation.combles?.condition || 'Moyen',
-      presenceCondensation: formData.details.isolation.combles?.hasCondensation || false,
-      zonesCondensation: formData.details.isolation.combles?.condensationLocations || [],
-      tauxHumidite: formData.details.isolation.combles?.humidityRate || 0,
-      etatCombles: formData.details.isolation.combles?.etatCombles || 'Moyen'
-    },
-    murs: {
-      presence: formData.details.isolation.murs?.presence || false,
-      type: formData.details.isolation.murs?.type || '',
-      pose: formData.details.isolation.murs?.pose || 'En rouleau',
-      epaisseur: formData.details.isolation.murs?.epaisseur || 0,
-      etat: formData.details.isolation.murs?.condition || 'Moyen'
-    },
-    sols: formData.details.isolation.sols ? {
-      presence: formData.details.isolation.sols.presence || false,
-      type: formData.details.isolation.sols.type || '',
-      pose: formData.details.isolation.sols.pose || 'En rouleau',
-      epaisseur: formData.details.isolation.sols.epaisseur || 0,
-      etat: formData.details.isolation.sols.condition || 'Moyen'
-    } : undefined
-  },
-
-  // Charpente
-  charpente: {
-    type: formData.details.framework.type || 'Fermette',
-    presenceArtive: formData.details.framework.hasBeam || false,
-    entretienEffectue: formData.details.framework.hadMaintenance || false,
-    dateEntretien: formData.details.framework.maintenanceDate 
-      ? new Date(formData.details.framework.maintenanceDate).toISOString()
-      : null,
-    etat: formData.details.framework.condition || 'Moyen'
-  },
-
-  // Toiture
-  toiture: {
-    type: formData.details.roof.type || 'Ardoise Naturelle',
-    typeFaitage: formData.details.roof.ridgeType || 'Cimente',
-    dateEntretien: formData.details.roof.maintenanceDate
-      ? new Date(formData.details.roof.maintenanceDate).toISOString()
-      : new Date().toISOString(),
-    typeEntretien: formData.details.roof.maintenanceType || '',
-    presenceImpuretes: formData.details.roof.hasImpurities || false,
-    annee: formData.details.roof.installationYear || new Date().getFullYear(),
-    etat: formData.details.roof.condition || 'Moyen'
-  },
-
-  // Impuretés
-  impuretes: {
-    condition: formData.details.impuretes?.condition || 'Moyen'
-  },
-
-  // Sécurité incendie (champs requis)
-  securiteIncendie: {
-    bouleIncendie: formData.details.securiteIncendie?.bouleIncendie || false,
-    extincteur: formData.details.securiteIncendie?.extincteur || false,
-    detecteurFumee: formData.details.securiteIncendie?.detecteurFumee || false
-  },
-
-  // Pièces
-  pieces: formData.details.rooms.map(room => ({
-    nom: room.name || '',
-    type: room.type || '',
-    etage: room.floor || 0,
-    ouvertures: {
-      nombre: room.windows?.count || 0,
-      typeVitrage: room.windows?.type || 'simple',
-      etat: room.condition?.windows || 'Moyen',
-      anneeInstallation: room.windows?.installationYear || new Date().getFullYear()
-    },
-    humidite: {
-      taux: room.humidity || 0,
-      etat: room.humidityCondition || 'Moyen'
-    }
-  })),
-
-  // Évaluations
-  evaluations: {
-    rooms: formData.evaluations?.rooms || {},
-    global: {
-      score: evaluationScore || 0,
-      condition: formData.evaluations?.global?.condition || 'Correct',
-      comment: formData.evaluations?.global?.comment || ''
-    }
-  },
-
-  // Statut
-  status: 'En cours' as ExpertiseStatus
-};
-    const headers = getAuthHeaders();
-    const response = await fetch(
-      isEditing && initialData?._id
-        ? `/api/expertises/${initialData._id}`
-        : "/api/expertises",
-      {
-        method: isEditing ? "PUT" : "POST",
-        headers: {
-          ...headers,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(expertiseData),
+      const validation = validateExpertiseData(formData);
+      if (!validation.isValid) {
+        throw new Error(`Validation échouée: ${validation.errors.join(", ")}`);
       }
-    );
 
-    if (!response.ok) {
-      throw new Error(
-        isEditing
-          ? "Erreur lors de la mise à jour"
-          : "Erreur lors de la création"
+      // Construction des données pour l'API
+      // Dans la fonction handleSubmit du ExpertiseForm.tsx
+
+      const expertiseData = {
+        // Informations de base
+        typeLogement: formData.typeLogement,
+
+        // Informations du bénéficiaire
+        beneficiaire: {
+          nom: `${formData.details.beneficiary.firstName} ${formData.details.beneficiary.lastName}`,
+          adresse: formData.details.beneficiary.address,
+          telephone: formData.details.beneficiary.phone,
+        },
+
+        // Détails généraux
+        details: {
+          anneeConstruction: Number(formData.details.construction.year),
+          superficie: Number(formData.details.construction.area),
+          nombreEtages: Number(formData.details.construction.floors),
+        },
+
+        // Ouvertures
+        ouvertures: {
+          nombre: formData.details.rooms[0]?.windows?.count || 0,
+          typeVitrage: formData.details.rooms[0]?.windows?.type || "simple",
+          etat: formData.details.rooms[0]?.windows?.condition || "Moyen",
+          anneeInstallation:
+            formData.details.rooms[0]?.windows?.installationYear ||
+            new Date().getFullYear(),
+        },
+
+        // Chauffage
+        chauffage: {
+          types: formData.details.chauffage.types || [],
+          nombreRadiateurs: formData.details.chauffage.nombreRadiateurs || 0,
+          localisations: formData.details.chauffage.localisations || [],
+          etat: formData.details.chauffage.condition || "Moyen",
+          anneeInstallation:
+            formData.details.chauffage.installationYear ||
+            new Date().getFullYear(),
+        },
+
+        // Humidité
+        humidite: {
+          taux: 0,
+          etat: formData.details.humidite?.condition || "Moyen",
+          tauxParPiece: formData.details.humidite?.tauxParPiece || {},
+        },
+
+        // Façade
+        facade: {
+          type: formData.details.facades[0]?.type || "Enduit",
+          epaisseurMurs: Number(formData.details.facades[0]?.thickness) || 0,
+          dernierEntretien: formData.details.facades[0]?.lastMaintenance
+            ? new Date(formData.details.facades[0].lastMaintenance).getTime()
+            : new Date().getTime(),
+          etat: formData.details.facades[0]?.condition || "Moyen",
+        },
+
+        // Tableau électrique
+        tableauElectrique: {
+          type: formData.details.electrical.type || "Mono",
+          anneePose:
+            Number(formData.details.electrical.installationYear) ||
+            new Date().getFullYear(),
+          presenceLinky: formData.details.electrical.hasLinky || false,
+          auxNormes: formData.details.electrical.upToStandards || false,
+          etat: formData.details.electrical.condition || "Moyen",
+        },
+
+        // Ventilation
+        ventilation: {
+          types: formData.details.ventilation.types || [],
+          localisations: formData.details.ventilation.localisations || [],
+          ventilationNaturelle: true,
+          anneePose:
+            formData.details.ventilation.installationYear ||
+            new Date().getFullYear(),
+          etat: formData.details.ventilation.condition || "Moyen",
+        },
+
+        // Isolation
+        isolation: {
+          combles: {
+            presence: formData.details.isolation.combles?.presence || false,
+            type: formData.details.isolation.combles?.type || "",
+            pose: formData.details.isolation.combles?.pose || "En rouleau",
+            epaisseur: formData.details.isolation.combles?.epaisseur || 0,
+            etat: formData.details.isolation.combles?.condition || "Moyen",
+            presenceCondensation:
+              formData.details.isolation.combles?.hasCondensation || false,
+            zonesCondensation:
+              formData.details.isolation.combles?.condensationLocations || [],
+            tauxHumidite: formData.details.isolation.combles?.humidityRate || 0,
+            etatCombles:
+              formData.details.isolation.combles?.etatCombles || "Moyen",
+          },
+          murs: {
+            presence: formData.details.isolation.murs?.presence || false,
+            type: formData.details.isolation.murs?.type || "",
+            pose: formData.details.isolation.murs?.pose || "En rouleau",
+            epaisseur: formData.details.isolation.murs?.epaisseur || 0,
+            etat: formData.details.isolation.murs?.condition || "Moyen",
+          },
+          sols: formData.details.isolation.sols
+            ? {
+                presence: formData.details.isolation.sols.presence || false,
+                type: formData.details.isolation.sols.type || "",
+                pose: formData.details.isolation.sols.pose || "En rouleau",
+                epaisseur: formData.details.isolation.sols.epaisseur || 0,
+                etat: formData.details.isolation.sols.condition || "Moyen",
+              }
+            : undefined,
+        },
+
+        // Charpente
+        charpente: {
+          type: formData.details.framework.type || "Fermette",
+          presenceArtive: formData.details.framework.hasBeam || false,
+          entretienEffectue: formData.details.framework.hadMaintenance || false,
+          dateEntretien: formData.details.framework.maintenanceDate
+            ? new Date(formData.details.framework.maintenanceDate).toISOString()
+            : null,
+          etat: formData.details.framework.condition || "Moyen",
+        },
+
+        // Toiture
+        toiture: {
+          type: formData.details.roof.type || "Ardoise Naturelle",
+          typeFaitage: formData.details.roof.ridgeType || "Cimente",
+          dateEntretien: formData.details.roof.maintenanceDate
+            ? new Date(formData.details.roof.maintenanceDate).toISOString()
+            : new Date().toISOString(),
+          typeEntretien: formData.details.roof.maintenanceType || "",
+          presenceImpuretes: formData.details.roof.hasImpurities || false,
+          annee:
+            formData.details.roof.installationYear || new Date().getFullYear(),
+          etat: formData.details.roof.condition || "Moyen",
+        },
+
+        // Impuretés
+        impuretes: {
+          condition: formData.details.impuretes?.condition || "Moyen",
+        },
+
+        // Sécurité incendie (champs requis)
+        securiteIncendie: {
+          bouleIncendie:
+            formData.details.securiteIncendie?.bouleIncendie || false,
+          extincteur: formData.details.securiteIncendie?.extincteur || false,
+          detecteurFumee:
+            formData.details.securiteIncendie?.detecteurFumee || false,
+        },
+
+        // Pièces
+        pieces: formData.details.rooms.map((room) => ({
+          nom: room.name || "",
+          type: room.type || "",
+          etage: room.floor || 0,
+          ouvertures: {
+            nombre: room.windows?.count || 0,
+            typeVitrage: room.windows?.type || "simple",
+            etat: room.condition?.windows || "Moyen",
+            anneeInstallation:
+              room.windows?.installationYear || new Date().getFullYear(),
+          },
+          humidite: {
+            taux: room.humidity || 0,
+            etat: room.humidityCondition || "Moyen",
+          },
+        })),
+
+        // Évaluations
+        evaluations: {
+          rooms: formData.evaluations?.rooms || {},
+          global: {
+            score: evaluationScore || 0,
+            condition: formData.evaluations?.global?.condition || "Correct",
+            comment: formData.evaluations?.global?.comment || "",
+          },
+        },
+
+        // Statut
+        status: "En cours" as ExpertiseStatus,
+      };
+      const headers = getAuthHeaders();
+      const response = await fetch(
+        isEditing && initialData?._id
+          ? `/api/expertises/${initialData._id}`
+          : "/api/expertises",
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(expertiseData),
+        }
       );
+
+      if (!response.ok) {
+        throw new Error(
+          isEditing
+            ? "Erreur lors de la mise à jour"
+            : "Erreur lors de la création"
+        );
+      }
+
+      if (onSubmit) {
+        await onSubmit(formData);
+      }
+
+      toast({
+        title: "Succès",
+        description: `L'expertise a été ${
+          isEditing ? "modifiée" : "créée"
+        } avec succès`,
+        status: "success",
+        duration: 3000,
+      });
+
+      router.push("/expertises");
+    } catch (error) {
+      console.error("Erreur:", error);
+      toast({
+        title: "Erreur",
+        description:
+          error instanceof Error ? error.message : "Une erreur est survenue",
+        status: "error",
+        duration: 3000,
+      });
+    } finally {
+      setLoading(false);
     }
-
-    if (onSubmit) {
-      await onSubmit(formData);
-    }
-
-    toast({
-      title: "Succès",
-      description: `L'expertise a été ${
-        isEditing ? "modifiée" : "créée"
-      } avec succès`,
-      status: "success",
-      duration: 3000,
-    });
-
-    router.push("/expertises");
-  } catch (error) {
-    console.error("Erreur:", error);
-    toast({
-      title: "Erreur",
-      description:
-        error instanceof Error ? error.message : "Une erreur est survenue",
-      status: "error",
-      duration: 3000,
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   const renderStep = () => {
     switch (currentStep) {
@@ -1439,104 +1460,106 @@ const expertiseData = {
           </VStack>
         );
 
-        case 2:
-          return (
-            <VStack spacing={6}>
-              <Grid
-                templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
-                gap={6}
-                width="100%"
-              >
-                <FormControl isRequired>
-                  <FormLabel>Prénom</FormLabel>
-                  <Input
-                    value={formData.details.beneficiary.firstName}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.beneficiary.firstName",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Prénom du bénéficiaire"
-                  />
-                </FormControl>
-        
-                <FormControl isRequired>
-                  <FormLabel>Nom</FormLabel>
-                  <Input
-                    value={formData.details.beneficiary.lastName}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.beneficiary.lastName",
-                        e.target.value
-                      )
-                    }
-                    placeholder="Nom du bénéficiaire"
-                  />
-                </FormControl>
-              </Grid>
-        
-              <FormControl isRequired position="relative">
-                <FormLabel>Adresse</FormLabel>
-                <Input
-                  value={formData.details.beneficiary.address}
-                  onChange={(e) => {
-                    handleInputChange("details.beneficiary.address", e.target.value);
-                    fetchAddressSuggestions(e.target.value);
-                  }}
-                  placeholder="Adresse complète"
-                />
-                {addressSuggestions.length > 0 && (
-                  <Box
-                    position="absolute"
-                    zIndex={1}
-                    bg="white"
-                    width="100%"
-                    border="1px solid"
-                    borderColor="gray.200"
-                    borderRadius="md"
-                    mt={2}
-                    maxH="200px"
-                    overflowY="auto"
-                  >
-                    {addressSuggestions.map((suggestion, index) => (
-                      <Box
-                        key={index}
-                        p={2}
-                        cursor="pointer"
-                        _hover={{ bg: "gray.100" }}
-                        onClick={() => {
-                          handleInputChange(
-                            "details.beneficiary.address",
-                            suggestion.label
-                          );
-                          setAddressSuggestions([]);
-                        }}
-                      >
-                        <Text>{suggestion.label}</Text>
-                        <Text fontSize="sm" color="gray.600">
-                          {suggestion.context}
-                        </Text>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </FormControl>
-        
+      case 2:
+        return (
+          <VStack spacing={6}>
+            <Grid
+              templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
+              gap={6}
+              width="100%"
+            >
               <FormControl isRequired>
-                <FormLabel>Téléphone</FormLabel>
-                <PhoneInput
-                  country={"fr"}
-                  value={formData.details.beneficiary.phone}
-                  onChange={(phone) =>
-                    handleInputChange("details.beneficiary.phone", phone)
+                <FormLabel>Prénom</FormLabel>
+                <Input
+                  value={formData.details.beneficiary.firstName}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "details.beneficiary.firstName",
+                      e.target.value
+                    )
                   }
-                  inputStyle={{ width: "100%" }}
-                  specialLabel=""
+                  placeholder="Prénom du bénéficiaire"
                 />
               </FormControl>
-            </VStack>
-          );
+
+              <FormControl isRequired>
+                <FormLabel>Nom</FormLabel>
+                <Input
+                  value={formData.details.beneficiary.lastName}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "details.beneficiary.lastName",
+                      e.target.value
+                    )
+                  }
+                  placeholder="Nom du bénéficiaire"
+                />
+              </FormControl>
+            </Grid>
+
+            <FormControl isRequired position="relative">
+              <FormLabel>Adresse</FormLabel>
+              <Input
+                value={formData.details.beneficiary.address}
+                onChange={(e) => {
+                  handleInputChange(
+                    "details.beneficiary.address",
+                    e.target.value
+                  );
+                  fetchAddressSuggestions(e.target.value);
+                }}
+                placeholder="Adresse complète"
+              />
+              {addressSuggestions.length > 0 && (
+                <Box
+                  position="absolute"
+                  zIndex={1}
+                  bg="white"
+                  width="100%"
+                  border="1px solid"
+                  borderColor="gray.200"
+                  borderRadius="md"
+                  mt={2}
+                  maxH="200px"
+                  overflowY="auto"
+                >
+                  {addressSuggestions.map((suggestion, index) => (
+                    <Box
+                      key={index}
+                      p={2}
+                      cursor="pointer"
+                      _hover={{ bg: "gray.100" }}
+                      onClick={() => {
+                        handleInputChange(
+                          "details.beneficiary.address",
+                          suggestion.label
+                        );
+                        setAddressSuggestions([]);
+                      }}
+                    >
+                      <Text>{suggestion.label}</Text>
+                      <Text fontSize="sm" color="gray.600">
+                        {suggestion.context}
+                      </Text>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+            </FormControl>
+
+            <FormControl isRequired>
+              <FormLabel>Téléphone</FormLabel>
+              <Input
+                type="tel"
+                value={formData.details.beneficiary.phone}
+                onChange={(e) =>
+                  handleInputChange("details.beneficiary.phone", e.target.value)
+                }
+                placeholder="0XXXXXXXXX"
+              />
+            </FormControl>
+          </VStack>
+        );
       case 3:
         return (
           <VStack spacing={6}>
@@ -1593,124 +1616,131 @@ const expertiseData = {
           </VStack>
         );
 
-        case 4:
-          return (
-            <VStack spacing={6}>
-              <Flex justify="space-between" align="center" width="100%">
-                <Heading size="md">Configuration des pièces</Heading>
-                <Button
-                  leftIcon={<FaPlus />}
-                  colorScheme="blue"
-                  onClick={() => {
-                    const newRoom: Room = {
-                      id: Date.now().toString(),
-                      type: "",
-                      name: "",
-                      floor: 0,
-                      humidity: 0,
-                      humidityCondition: "Moyen",
-                      windows: {
-                        count: 0,
-                        type: "simple",
-                        installationYear: new Date().getFullYear(),
-                        condition: "Moyen"
-                      },
-                      condition: {
-                        windows: "Moyen",
-                        heating: "Moyen",
-                        humidity: "Moyen"
-                      },
-                      ventilation: [],
-                      ventilationCondition: "Moyen"
-                    };
-        
-                    setFormData((prev) => ({
-                      ...prev,
-                      details: {
-                        ...prev.details,
-                        rooms: [newRoom, ...prev.details.rooms]
-                      }
-                    }));
-                  }}
-                >
-                  Ajouter une pièce
-                </Button>
-              </Flex>
-        
-              {formData.details.rooms.map((room, index) => (
-                <Card key={room.id} width="100%" variant="outline">
-                  <CardBody>
-                    <VStack spacing={4}>
-                      <Grid
-                        templateColumns={isMobile ? "1fr" : "repeat(3, 1fr) auto"}
-                        gap={4}
-                        width="100%"
-                        alignItems="end"
-                      >
-                        <FormControl isRequired>
-                          <FormLabel>Type de pièce</FormLabel>
-                          <Select
-                            value={room.type}
-                            onChange={(e) => {
-                              handleRoomUpdate(index, "type", e.target.value);
-                              // Mise à jour automatique du nom si pas déjà défini
-                              if (!room.name || room.name === "") {
-                                const newType = e.target.value;
-                                const sameTypeCount = formData.details.rooms.filter(
+      case 4:
+        return (
+          <VStack spacing={6}>
+            <Flex justify="space-between" align="center" width="100%">
+              <Heading size="md">Configuration des pièces</Heading>
+              <Button
+                leftIcon={<FaPlus />}
+                colorScheme="blue"
+                onClick={() => {
+                  const newRoom: Room = {
+                    id: Date.now().toString(),
+                    type: "",
+                    name: "",
+                    floor: 0,
+                    humidity: 0,
+                    humidityCondition: "Moyen",
+                    windows: {
+                      count: 0,
+                      type: "simple",
+                      installationYear: new Date().getFullYear(),
+                      condition: "Moyen",
+                    },
+                    condition: {
+                      windows: "Moyen",
+                      heating: "Moyen",
+                      humidity: "Moyen",
+                    },
+                    ventilation: [],
+                    ventilationCondition: "Moyen",
+                  };
+
+                  setFormData((prev) => ({
+                    ...prev,
+                    details: {
+                      ...prev.details,
+                      rooms: [newRoom, ...prev.details.rooms],
+                    },
+                  }));
+                }}
+              >
+                Ajouter une pièce
+              </Button>
+            </Flex>
+
+            {formData.details.rooms.map((room, index) => (
+              <Card key={room.id} width="100%" variant="outline">
+                <CardBody>
+                  <VStack spacing={4}>
+                    <Grid
+                      templateColumns={isMobile ? "1fr" : "repeat(3, 1fr) auto"}
+                      gap={4}
+                      width="100%"
+                      alignItems="end"
+                    >
+                      <FormControl isRequired>
+                        <FormLabel>Type de pièce</FormLabel>
+                        <Select
+                          value={room.type}
+                          onChange={(e) => {
+                            handleRoomUpdate(index, "type", e.target.value);
+                            // Mise à jour automatique du nom si pas déjà défini
+                            if (!room.name || room.name === "") {
+                              const newType = e.target.value;
+                              const sameTypeCount =
+                                formData.details.rooms.filter(
                                   (r) => r.type === newType
                                 ).length;
-                                const newName = sameTypeCount > 0 ? `${newType} ${sameTypeCount + 1}` : newType;
-                                handleRoomUpdate(index, "name", newName);
-                              }
-                            }}
-                          >
-                            <option value="">Sélectionnez un type</option>
-                            {ROOM_TYPES.map((type) => (
-                              <option key={type} value={type}>
-                                {type}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-        
-                        <FormControl isRequired>
-                          <FormLabel>Nom de la pièce</FormLabel>
-                          <Input
-                            value={room.name}
-                            onChange={(e) => handleRoomUpdate(index, "name", e.target.value)}
-                            placeholder={room.type ? `${room.type}` : "Nom de la pièce"}
-                          />
-                        </FormControl>
-        
-                        <FormControl>
-                          <FormLabel>Étage</FormLabel>
-                          <NumberInput
-                            min={0}
-                            max={formData.details.construction.floors}
-                            value={room.floor}
-                            onChange={(value) =>
-                              handleRoomUpdate(index, "floor", parseInt(value))
+                              const newName =
+                                sameTypeCount > 0
+                                  ? `${newType} ${sameTypeCount + 1}`
+                                  : newType;
+                              handleRoomUpdate(index, "name", newName);
                             }
-                          >
-                            <NumberInputField />
-                          </NumberInput>
-                        </FormControl>
-        
-                        <IconButton
-                          aria-label="Supprimer la pièce"
-                          icon={<FaTrash />}
-                          colorScheme="red"
-                          variant="ghost"
-                          onClick={() => removeRoom(index)}
+                          }}
+                        >
+                          <option value="">Sélectionnez un type</option>
+                          {ROOM_TYPES.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl isRequired>
+                        <FormLabel>Nom de la pièce</FormLabel>
+                        <Input
+                          value={room.name}
+                          onChange={(e) =>
+                            handleRoomUpdate(index, "name", e.target.value)
+                          }
+                          placeholder={
+                            room.type ? `${room.type}` : "Nom de la pièce"
+                          }
                         />
-                      </Grid>
-                    </VStack>
-                  </CardBody>
-                </Card>
-              ))}
-            </VStack>
-          );
-        
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Étage</FormLabel>
+                        <NumberInput
+                          min={0}
+                          max={formData.details.construction.floors}
+                          value={room.floor}
+                          onChange={(value) =>
+                            handleRoomUpdate(index, "floor", parseInt(value))
+                          }
+                        >
+                          <NumberInputField />
+                        </NumberInput>
+                      </FormControl>
+
+                      <IconButton
+                        aria-label="Supprimer la pièce"
+                        icon={<FaTrash />}
+                        colorScheme="red"
+                        variant="ghost"
+                        onClick={() => removeRoom(index)}
+                      />
+                    </Grid>
+                  </VStack>
+                </CardBody>
+              </Card>
+            ))}
+          </VStack>
+        );
 
       case 5:
         return (
@@ -1901,279 +1931,291 @@ const expertiseData = {
           </VStack>
         );
 
-        case 7:
-  return (
-    <VStack spacing={6}>
-      <Heading size="md">Configuration de l'isolation</Heading>
+      case 7:
+        return (
+          <VStack spacing={6}>
+            <Heading size="md">Configuration de l'isolation</Heading>
 
-      {/* Isolation des combles */}
-      <Card width="100%">
-        <CardHeader>
-          <Heading size="sm">Isolation des combles</Heading>
-        </CardHeader>
-        <CardBody>
-          <VStack spacing={4}>
-            <FormControl>
-              <FormLabel>Présence d'isolation</FormLabel>
-              <RadioGroup
-                value={formData.details.isolation.combles.presence ? "oui" : "non"}
-                onChange={(value) =>
-                  handleInputChange(
-                    "details.isolation.combles.presence",
-                    value === "oui"
-                  )
-                }
-              >
-                <Stack direction="row">
-                  <Radio value="oui">Oui</Radio>
-                  <Radio value="non">Non</Radio>
-                </Stack>
-              </RadioGroup>
-            </FormControl>
-
-            {formData.details.isolation.combles.presence && (
-              <>
-                <FormControl>
-                  <FormLabel>Type d'isolation</FormLabel>
-                  <Select
-                    value={formData.details.isolation.combles.type}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.isolation.combles.type",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">Sélectionnez un type</option>
-                    {TYPE_ISOLATION.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Type de pose</FormLabel>
-                  <Select
-                    value={formData.details.isolation.combles.pose}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.isolation.combles.pose",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">Sélectionnez un type</option>
-                    {TYPE_ISOLATION_POSE.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Épaisseur (cm)</FormLabel>
-                  <NumberInput
-                    min={0}
-                    value={formData.details.isolation.combles.epaisseur}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.isolation.combles.epaisseur",
-                        parseInt(value)
-                      )
-                    }
-                  >
-                    <NumberInputField />
-                  </NumberInput>
-                </FormControl>
-              </>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* Isolation des murs */}
-      <Card width="100%">
-        <CardHeader>
-          <Heading size="sm">Isolation des murs</Heading>
-        </CardHeader>
-        <CardBody>
-          <VStack spacing={4}>
-            <FormControl>
-              <FormLabel>Présence d'isolation</FormLabel>
-              <RadioGroup
-                value={formData.details.isolation.murs.presence ? "oui" : "non"}
-                onChange={(value) =>
-                  handleInputChange(
-                    "details.isolation.murs.presence",
-                    value === "oui"
-                  )
-                }
-              >
-                <Stack direction="row">
-                  <Radio value="oui">Oui</Radio>
-                  <Radio value="non">Non</Radio>
-                </Stack>
-              </RadioGroup>
-            </FormControl>
-
-            {formData.details.isolation.murs.presence && (
-              <>
-                <FormControl>
-                  <FormLabel>Type d'isolation</FormLabel>
-                  <Select
-                    value={formData.details.isolation.murs.type}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.isolation.murs.type",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">Sélectionnez un type</option>
-                    {TYPE_ISOLATION.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Type de pose</FormLabel>
-                  <Select
-                    value={formData.details.isolation.murs.pose}
-                    onChange={(e) =>
-                      handleInputChange(
-                        "details.isolation.murs.pose",
-                        e.target.value
-                      )
-                    }
-                  >
-                    <option value="">Sélectionnez un type</option>
-                    {TYPE_ISOLATION_POSE.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-
-                <FormControl>
-                  <FormLabel>Épaisseur (cm)</FormLabel>
-                  <NumberInput
-                    min={0}
-                    value={formData.details.isolation.murs.epaisseur}
-                    onChange={(value) =>
-                      handleInputChange(
-                        "details.isolation.murs.epaisseur",
-                        parseInt(value)
-                      )
-                    }
-                  >
-                    <NumberInputField />
-                  </NumberInput>
-                </FormControl>
-              </>
-            )}
-          </VStack>
-        </CardBody>
-      </Card>
-
-      {/* Isolation du sol - Uniquement si sous-sol présent */}
-      {formData.details.rooms.some((room) => room.type === "Sous-sol") && (
-        <Card width="100%">
-          <CardHeader>
-            <Heading size="sm">Isolation du Sous-Sol</Heading>
-          </CardHeader>
-          <CardBody>
-            <VStack spacing={4}>
-              <FormControl>
-                <FormLabel>Présence d'isolation</FormLabel>
-                <RadioGroup
-                  value={formData.details.isolation.sols?.presence ? "oui" : "non"}
-                  onChange={(value) =>
-                    handleInputChange(
-                      "details.isolation.sols.presence",
-                      value === "oui"
-                    )
-                  }
-                >
-                  <Stack direction="row">
-                    <Radio value="oui">Oui</Radio>
-                    <Radio value="non">Non</Radio>
-                  </Stack>
-                </RadioGroup>
-              </FormControl>
-
-              {formData.details.isolation.sols?.presence && (
-                <>
+            {/* Isolation des combles */}
+            <Card width="100%">
+              <CardHeader>
+                <Heading size="sm">Isolation des combles</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={4}>
                   <FormControl>
-                    <FormLabel>Type d'isolation</FormLabel>
-                    <Select
-                      value={formData.details.isolation.sols.type}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.isolation.sols.type",
-                          e.target.value
-                        )
+                    <FormLabel>Présence d'isolation</FormLabel>
+                    <RadioGroup
+                      value={
+                        formData.details.isolation.combles.presence
+                          ? "oui"
+                          : "non"
                       }
-                    >
-                      <option value="">Sélectionnez un type</option>
-                      {TYPE_ISOLATION.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel>Type de pose</FormLabel>
-                    <Select
-                      value={formData.details.isolation.sols.pose}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.isolation.sols.pose",
-                          e.target.value
-                        )
-                      }
-                    >
-                      <option value="">Sélectionnez un type</option>
-                      {TYPE_ISOLATION_POSE.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-
-                  <FormControl>
-                    <FormLabel>Épaisseur (cm)</FormLabel>
-                    <NumberInput
-                      min={0}
-                      value={formData.details.isolation.sols.epaisseur}
                       onChange={(value) =>
                         handleInputChange(
-                          "details.isolation.sols.epaisseur",
-                          parseInt(value)
+                          "details.isolation.combles.presence",
+                          value === "oui"
                         )
                       }
                     >
-                      <NumberInputField />
-                    </NumberInput>
+                      <Stack direction="row">
+                        <Radio value="oui">Oui</Radio>
+                        <Radio value="non">Non</Radio>
+                      </Stack>
+                    </RadioGroup>
                   </FormControl>
-                </>
-              )}
-            </VStack>
-          </CardBody>
-        </Card>
-      )}
-    </VStack>
-  );
-        
+
+                  {formData.details.isolation.combles.presence && (
+                    <>
+                      <FormControl>
+                        <FormLabel>Type d'isolation</FormLabel>
+                        <Select
+                          value={formData.details.isolation.combles.type}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.isolation.combles.type",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Sélectionnez un type</option>
+                          {TYPE_ISOLATION.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Type de pose</FormLabel>
+                        <Select
+                          value={formData.details.isolation.combles.pose}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.isolation.combles.pose",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Sélectionnez un type</option>
+                          {TYPE_ISOLATION_POSE.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Épaisseur (cm)</FormLabel>
+                        <NumberInput
+                          min={0}
+                          value={formData.details.isolation.combles.epaisseur}
+                          onChange={(value) =>
+                            handleInputChange(
+                              "details.isolation.combles.epaisseur",
+                              parseInt(value)
+                            )
+                          }
+                        >
+                          <NumberInputField />
+                        </NumberInput>
+                      </FormControl>
+                    </>
+                  )}
+                </VStack>
+              </CardBody>
+            </Card>
+
+            {/* Isolation des murs */}
+            <Card width="100%">
+              <CardHeader>
+                <Heading size="sm">Isolation des murs</Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={4}>
+                  <FormControl>
+                    <FormLabel>Présence d'isolation</FormLabel>
+                    <RadioGroup
+                      value={
+                        formData.details.isolation.murs.presence ? "oui" : "non"
+                      }
+                      onChange={(value) =>
+                        handleInputChange(
+                          "details.isolation.murs.presence",
+                          value === "oui"
+                        )
+                      }
+                    >
+                      <Stack direction="row">
+                        <Radio value="oui">Oui</Radio>
+                        <Radio value="non">Non</Radio>
+                      </Stack>
+                    </RadioGroup>
+                  </FormControl>
+
+                  {formData.details.isolation.murs.presence && (
+                    <>
+                      <FormControl>
+                        <FormLabel>Type d'isolation</FormLabel>
+                        <Select
+                          value={formData.details.isolation.murs.type}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.isolation.murs.type",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Sélectionnez un type</option>
+                          {TYPE_ISOLATION.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Type de pose</FormLabel>
+                        <Select
+                          value={formData.details.isolation.murs.pose}
+                          onChange={(e) =>
+                            handleInputChange(
+                              "details.isolation.murs.pose",
+                              e.target.value
+                            )
+                          }
+                        >
+                          <option value="">Sélectionnez un type</option>
+                          {TYPE_ISOLATION_POSE.map((type) => (
+                            <option key={type} value={type}>
+                              {type}
+                            </option>
+                          ))}
+                        </Select>
+                      </FormControl>
+
+                      <FormControl>
+                        <FormLabel>Épaisseur (cm)</FormLabel>
+                        <NumberInput
+                          min={0}
+                          value={formData.details.isolation.murs.epaisseur}
+                          onChange={(value) =>
+                            handleInputChange(
+                              "details.isolation.murs.epaisseur",
+                              parseInt(value)
+                            )
+                          }
+                        >
+                          <NumberInputField />
+                        </NumberInput>
+                      </FormControl>
+                    </>
+                  )}
+                </VStack>
+              </CardBody>
+            </Card>
+
+            {/* Isolation du sol - Uniquement si sous-sol présent */}
+            {formData.details.rooms.some(
+              (room) => room.type === "Sous-sol"
+            ) && (
+              <Card width="100%">
+                <CardHeader>
+                  <Heading size="sm">Isolation du Sous-Sol</Heading>
+                </CardHeader>
+                <CardBody>
+                  <VStack spacing={4}>
+                    <FormControl>
+                      <FormLabel>Présence d'isolation</FormLabel>
+                      <RadioGroup
+                        value={
+                          formData.details.isolation.sols?.presence
+                            ? "oui"
+                            : "non"
+                        }
+                        onChange={(value) =>
+                          handleInputChange(
+                            "details.isolation.sols.presence",
+                            value === "oui"
+                          )
+                        }
+                      >
+                        <Stack direction="row">
+                          <Radio value="oui">Oui</Radio>
+                          <Radio value="non">Non</Radio>
+                        </Stack>
+                      </RadioGroup>
+                    </FormControl>
+
+                    {formData.details.isolation.sols?.presence && (
+                      <>
+                        <FormControl>
+                          <FormLabel>Type d'isolation</FormLabel>
+                          <Select
+                            value={formData.details.isolation.sols.type}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "details.isolation.sols.type",
+                                e.target.value
+                              )
+                            }
+                          >
+                            <option value="">Sélectionnez un type</option>
+                            {TYPE_ISOLATION.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl>
+                          <FormLabel>Type de pose</FormLabel>
+                          <Select
+                            value={formData.details.isolation.sols.pose}
+                            onChange={(e) =>
+                              handleInputChange(
+                                "details.isolation.sols.pose",
+                                e.target.value
+                              )
+                            }
+                          >
+                            <option value="">Sélectionnez un type</option>
+                            {TYPE_ISOLATION_POSE.map((type) => (
+                              <option key={type} value={type}>
+                                {type}
+                              </option>
+                            ))}
+                          </Select>
+                        </FormControl>
+
+                        <FormControl>
+                          <FormLabel>Épaisseur (cm)</FormLabel>
+                          <NumberInput
+                            min={0}
+                            value={formData.details.isolation.sols.epaisseur}
+                            onChange={(value) =>
+                              handleInputChange(
+                                "details.isolation.sols.epaisseur",
+                                parseInt(value)
+                              )
+                            }
+                          >
+                            <NumberInputField />
+                          </NumberInput>
+                        </FormControl>
+                      </>
+                    )}
+                  </VStack>
+                </CardBody>
+              </Card>
+            )}
+          </VStack>
+        );
+
       case 8:
         return (
           <VStack spacing={6}>
@@ -2529,185 +2571,183 @@ const expertiseData = {
             </Card>
           </VStack>
         );
-        case 12:
-          return (
-            <VStack spacing={6}>
-              <Heading size="md">État détaillé par pièce et éléments généraux</Heading>
-        
-              {/* Évaluation par pièce */}
-              {formData.details.rooms.map((room, index) => (
-                <Card key={room.id} width="100%">
-                  <CardHeader>
-                    <Heading size="sm">
-                      {room.name || `${room.type} ${index + 1}`}
-                      {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
-                    </Heading>
-                  </CardHeader>
-                  <CardBody>
-                    <VStack spacing={4}>
-                      {/* État des ouvertures */}
-                      {room.windows.count > 0 && (
-                        <StateSelector
-                          label={`État des ouvertures (${room.windows.count} ${
-                            room.windows.count > 1 ? "ouvertures" : "ouverture"
-                          })`}
-                          currentValue={room.condition.windows}
-                          onChange={(value) =>
-                            handleConditionUpdate(index, "windows", value)
-                          }
-                          fieldId={`${room.id}-windows-state`}
-                        />
-                      )}
-        
-                      {/* État du chauffage si la pièce est équipée */}
-                      {formData.details.chauffage.localisations.includes(room.id) && (
-                        <StateSelector
-                          label="État du chauffage"
-                          currentValue={room.condition.heating}
-                          onChange={(value) =>
-                            handleConditionUpdate(index, "heating", value)
-                          }
-                          fieldId={`${room.id}-heating-state`}
-                        />
-                      )}
-        
-                      {/* État de l'humidité */}
-                      <StateSelector
-                        label="État de l'humidité"
-                        currentValue={room.humidityCondition}
-                        onChange={(value) =>
-                          handleConditionUpdate(index, "humidity", value)
-                        }
-                        fieldId={`${room.id}-humidity-state`}
-                        description="Évaluation de l'humidité dans la pièce"
-                      />
-                    </VStack>
-                  </CardBody>
-                </Card>
-              ))}
-        
-              {/* État général de la maison et de ses installations */}
-              <Card width="100%">
+      case 12:
+        return (
+          <VStack spacing={6}>
+            <Heading size="md">
+              État détaillé par pièce et éléments généraux
+            </Heading>
+
+            {/* Évaluation par pièce */}
+            {formData.details.rooms.map((room, index) => (
+              <Card key={room.id} width="100%">
                 <CardHeader>
-                  <Heading size="sm">État Général de la maison et de ses installations</Heading>
+                  <Heading size="sm">
+                    {room.name || `${room.type} ${index + 1}`}
+                    {room.floor > 0 ? ` (Étage ${room.floor})` : " (RDC)"}
+                  </Heading>
                 </CardHeader>
                 <CardBody>
-                  <VStack spacing={6}>
-                    {/* État de l'humidité générale */}
+                  <VStack spacing={4}>
+                    {/* État des ouvertures */}
+                    {room.windows.count > 0 && (
+                      <StateSelector
+                        label={`État des ouvertures (${room.windows.count} ${
+                          room.windows.count > 1 ? "ouvertures" : "ouverture"
+                        })`}
+                        currentValue={room.condition.windows}
+                        onChange={(value) =>
+                          handleConditionUpdate(index, "windows", value)
+                        }
+                        fieldId={`${room.id}-windows-state`}
+                      />
+                    )}
+
+                    {/* État du chauffage si la pièce est équipée */}
+                    {formData.details.chauffage.localisations.includes(
+                      room.id
+                    ) && (
+                      <StateSelector
+                        label="État du chauffage"
+                        currentValue={room.condition.heating}
+                        onChange={(value) =>
+                          handleConditionUpdate(index, "heating", value)
+                        }
+                        fieldId={`${room.id}-heating-state`}
+                      />
+                    )}
+
+                    {/* État de l'humidité */}
                     <StateSelector
-                      label="État de l'humidité générale"
-                      currentValue={formData.details.humidite.condition}
+                      label="État de l'humidité"
+                      currentValue={room.humidityCondition}
                       onChange={(value) =>
-                        handleInputChange("details.humidite.condition", value)
+                        handleConditionUpdate(index, "humidity", value)
                       }
-                      fieldId="humidity-walls-state"
+                      fieldId={`${room.id}-humidity-state`}
+                      description="Évaluation de l'humidité dans la pièce"
                     />
-        
-                    {/* État des impuretés */}
-                    <StateSelector
-                      label="État des impuretés"
-                      currentValue={formData.details.impuretes.condition}
-                      onChange={(value) =>
-                        handleInputChange("details.impuretes.condition", value)
-                      }
-                      fieldId="impurities-state"
-                    />
-        
-                    {/* État de la façade */}
-                    <StateSelector
-                      label="État de la façade"
-                      currentValue={formData.details.facades[0].condition}
-                      onChange={(value) =>
-                        handleInputChange("details.facades[0].condition", value)
-                      }
-                      fieldId="facade-state"
-                    />
-        
-                    {/* État de la toiture */}
-                    <StateSelector
-                      label="État de la toiture"
-                      currentValue={formData.details.toiture.condition}
-                      onChange={(value) =>
-                        handleInputChange("details.toiture.condition", value)
-                      }
-                      fieldId="roof-state"
-                    />
-        
-                    {/* État de la charpente */}
-                    <StateSelector
-                      label="État de la charpente"
-                      currentValue={formData.details.charpente.condition}
-                      onChange={(value) =>
-                        handleInputChange("details.charpente.condition", value)
-                      }
-                      fieldId="framework-state"
-                    />
-        
-                    {/* État de la ventilation */}
-                    <StateSelector
-                      label="État de la ventilation"
-                      currentValue={formData.details.ventilation.condition}
-                      onChange={(value) =>
-                        handleInputChange("details.ventilation.condition", value)
-                      }
-                      fieldId="ventilation-state"
-                    />
-        
-                    {/* État des normes électriques */}
-                    <StateSelector
-                      label="État des normes électriques"
-                      currentValue={formData.details.electrical.condition}
-                      onChange={(value) =>
-                        handleInputChange("details.electrical.condition", value)
-                      }
-                      fieldId="electrical-state"
-                    />
-        
-                    {/* État des isolations si présentes */}
-                    {formData.details.isolation.combles.presence && (
-                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
-                        <VStack spacing={4} align="stretch">
-                          <StateSelector
-                            label="État de l'isolation des combles"
-                            currentValue={formData.details.isolation.combles.condition}
-                            onChange={(value) =>
-                              handleInputChange(
-                                "details.isolation.combles.condition",
-                                value
-                              )
-                            }
-                            fieldId="isolation-combles-state"
-                          />
-        
-                          {formData.details.isolation.combles.pose === "En soufflage" && (
-                            <FormControl>
-                              <FormLabel>
-                                Le croutage obligatoire pour l'isolation {formData.details.isolation.combles.type} des Combles avec une pose en soufflage a été effectué ?
-                              </FormLabel>
-                              <RadioGroup
-                                value={formData.details.isolation.combles.croutageEffectue ? "oui" : "non"}
-                                onChange={(value) =>
-                                  handleInputChange(
-                                    "details.isolation.combles.croutageEffectue",
-                                    value === "oui"
-                                  )
-                                }
-                              >
-                                <Stack direction="row">
-                                  <Radio value="oui">Oui</Radio>
-                                  <Radio value="non">Non</Radio>
-                                </Stack>
-                              </RadioGroup>
-                            </FormControl>
-                          )}
-        
+                  </VStack>
+                </CardBody>
+              </Card>
+            ))}
+
+            {/* État général de la maison et de ses installations */}
+            <Card width="100%">
+              <CardHeader>
+                <Heading size="sm">
+                  État Général de la maison et de ses installations
+                </Heading>
+              </CardHeader>
+              <CardBody>
+                <VStack spacing={6}>
+                  {/* État de l'humidité générale */}
+                  <StateSelector
+                    label="État de l'humidité générale"
+                    currentValue={formData.details.humidite.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.humidite.condition", value)
+                    }
+                    fieldId="humidity-walls-state"
+                  />
+
+                  {/* État des impuretés */}
+                  <StateSelector
+                    label="État des impuretés"
+                    currentValue={formData.details.impuretes.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.impuretes.condition", value)
+                    }
+                    fieldId="impurities-state"
+                  />
+
+                  {/* État de la façade */}
+                  <StateSelector
+                    label="État de la façade"
+                    currentValue={formData.details.facades[0].condition}
+                    onChange={(value) =>
+                      handleInputChange("details.facades[0].condition", value)
+                    }
+                    fieldId="facade-state"
+                  />
+
+                  {/* État de la toiture */}
+                  <StateSelector
+                    label="État de la toiture"
+                    currentValue={formData.details.toiture.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.toiture.condition", value)
+                    }
+                    fieldId="roof-state"
+                  />
+
+                  {/* État de la charpente */}
+                  <StateSelector
+                    label="État de la charpente"
+                    currentValue={formData.details.charpente.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.charpente.condition", value)
+                    }
+                    fieldId="framework-state"
+                  />
+
+                  {/* État de la ventilation */}
+                  <StateSelector
+                    label="État de la ventilation"
+                    currentValue={formData.details.ventilation.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.ventilation.condition", value)
+                    }
+                    fieldId="ventilation-state"
+                  />
+
+                  {/* État des normes électriques */}
+                  <StateSelector
+                    label="État des normes électriques"
+                    currentValue={formData.details.electrical.condition}
+                    onChange={(value) =>
+                      handleInputChange("details.electrical.condition", value)
+                    }
+                    fieldId="electrical-state"
+                  />
+
+                  {/* État des isolations si présentes */}
+                  {formData.details.isolation.combles.presence && (
+                    <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                      <VStack spacing={4} align="stretch">
+                        <StateSelector
+                          label="État de l'isolation des combles"
+                          currentValue={
+                            formData.details.isolation.combles.condition
+                          }
+                          onChange={(value) =>
+                            handleInputChange(
+                              "details.isolation.combles.condition",
+                              value
+                            )
+                          }
+                          fieldId="isolation-combles-state"
+                        />
+
+                        {formData.details.isolation.combles.pose ===
+                          "En soufflage" && (
                           <FormControl>
-                            <FormLabel>Présence de condensation dans les combles ?</FormLabel>
+                            <FormLabel>
+                              Le croutage obligatoire pour l'isolation{" "}
+                              {formData.details.isolation.combles.type} des
+                              Combles avec une pose en soufflage a été effectué
+                              ?
+                            </FormLabel>
                             <RadioGroup
-                              value={formData.details.isolation.combles.hasCondensation ? "oui" : "non"}
+                              value={
+                                formData.details.isolation.combles
+                                  .croutageEffectue
+                                  ? "oui"
+                                  : "non"
+                              }
                               onChange={(value) =>
                                 handleInputChange(
-                                  "details.isolation.combles.hasCondensation",
+                                  "details.isolation.combles.croutageEffectue",
                                   value === "oui"
                                 )
                               }
@@ -2718,159 +2758,208 @@ const expertiseData = {
                               </Stack>
                             </RadioGroup>
                           </FormControl>
-        
-                          {formData.details.isolation.combles.hasCondensation && (
-                            <FormControl>
-                              <FormLabel>Taux de condensation (%)</FormLabel>
-                              <NumberInput
-                                min={0}
-                                max={100}
-                                value={formData.details.isolation.combles.humidityRate}
-                                onChange={(value) =>
-                                  handleInputChange(
-                                    "details.isolation.combles.humidityRate",
-                                    parseInt(value)
-                                  )
-                                }
-                              >
-                                <NumberInputField />
-                              </NumberInput>
-                            </FormControl>
-                          )}
-                        </VStack>
-                      </Box>
-                    )}
-        
-                    {formData.details.isolation.murs.presence && (
-                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
-                        <VStack spacing={4} align="stretch">
-                          <StateSelector
-                            label="État de l'isolation des murs"
-                            currentValue={formData.details.isolation.murs.condition}
+                        )}
+
+                        <FormControl>
+                          <FormLabel>
+                            Présence de condensation dans les combles ?
+                          </FormLabel>
+                          <RadioGroup
+                            value={
+                              formData.details.isolation.combles.hasCondensation
+                                ? "oui"
+                                : "non"
+                            }
                             onChange={(value) =>
                               handleInputChange(
-                                "details.isolation.murs.condition",
-                                value
+                                "details.isolation.combles.hasCondensation",
+                                value === "oui"
                               )
                             }
-                            fieldId="isolation-murs-state"
-                          />
-        
-                          {formData.details.isolation.murs.pose === "En soufflage" && (
-                            <FormControl>
-                              <FormLabel>
-                                Le croutage obligatoire pour l'isolation {formData.details.isolation.murs.type} des Murs avec une pose en soufflage a été effectué ?
-                              </FormLabel>
-                              <RadioGroup
-                                value={formData.details.isolation.murs.croutageEffectue ? "oui" : "non"}
-                                onChange={(value) =>
-                                  handleInputChange(
-                                    "details.isolation.murs.croutageEffectue",
-                                    value === "oui"
-                                  )
-                                }
-                              >
-                                <Stack direction="row">
-                                  <Radio value="oui">Oui</Radio>
-                                  <Radio value="non">Non</Radio>
-                                </Stack>
-                              </RadioGroup>
-                            </FormControl>
-                          )}
-                        </VStack>
-                      </Box>
-                    )}
-        
-                    {formData.details.isolation.sols?.presence && (
-                      <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
-                        <VStack spacing={4} align="stretch">
-                          <StateSelector
-                            label="État de l'isolation du sous-sol"
-                            currentValue={formData.details.isolation.sols.condition}
-                            onChange={(value) =>
-                              handleInputChange(
-                                "details.isolation.sols.condition",
-                                value
-                              )
-                            }
-                            fieldId="isolation-sols-state"
-                          />
-        
-                          {formData.details.isolation.sols.pose === "En soufflage" && (
-                            <FormControl>
-                              <FormLabel>
-                                Le croutage obligatoire pour l'isolation {formData.details.isolation.sols.type} du Sous-sol avec une pose en soufflage a été effectué ?
-                              </FormLabel>
-                              <RadioGroup
-                                value={formData.details.isolation.sols.croutageEffectue ? "oui" : "non"}
-                                onChange={(value) =>
-                                  handleInputChange(
-                                    "details.isolation.sols.croutageEffectue",
-                                    value === "oui"
-                                  )
-                                }
-                              >
-                                <Stack direction="row">
-                                  <Radio value="oui">Oui</Radio>
-                                  <Radio value="non">Non</Radio>
-                                </Stack>
-                              </RadioGroup>
-                            </FormControl>
-                          )}
-                        </VStack>
-                      </Box>
-                    )}
-        
-                    {/* Protection incendie */}
-                    <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
-                      <Text fontWeight="bold" fontSize="lg" mb={4}>
-                        Protection incendie
-                      </Text>
-                      <Stack spacing={3}>
-                        <Checkbox
-                          isChecked={formData.details.securiteIncendie.bouleIncendie}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "details.securiteIncendie.bouleIncendie",
-                              e.target.checked
-                            )
-                          }
-                          id="boule-incendie"
-                        >
-                          Boule incendie
-                        </Checkbox>
-                        <Checkbox
-                          isChecked={formData.details.securiteIncendie.extincteur}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "details.securiteIncendie.extincteur",
-                              e.target.checked
-                            )
-                          }
-                          id="extincteur"
-                        >
-                          Extincteur
-                        </Checkbox>
-                        <Checkbox
-                          isChecked={formData.details.securiteIncendie.detecteurFumee}
-                          onChange={(e) =>
-                            handleInputChange(
-                              "details.securiteIncendie.detecteurFumee",
-                              e.target.checked
-                            )
-                          }
-                          id="detecteur-fumee"
-                        >
-                          Détecteur de fumée
-                        </Checkbox>
-                      </Stack>
+                          >
+                            <Stack direction="row">
+                              <Radio value="oui">Oui</Radio>
+                              <Radio value="non">Non</Radio>
+                            </Stack>
+                          </RadioGroup>
+                        </FormControl>
+
+                        {formData.details.isolation.combles.hasCondensation && (
+                          <FormControl>
+                            <FormLabel>Taux de condensation (%)</FormLabel>
+                            <NumberInput
+                              min={0}
+                              max={100}
+                              value={
+                                formData.details.isolation.combles.humidityRate
+                              }
+                              onChange={(value) =>
+                                handleInputChange(
+                                  "details.isolation.combles.humidityRate",
+                                  parseInt(value)
+                                )
+                              }
+                            >
+                              <NumberInputField />
+                            </NumberInput>
+                          </FormControl>
+                        )}
+                      </VStack>
                     </Box>
-                  </VStack>
-                </CardBody>
-              </Card>
-            </VStack>
-          );
-    
+                  )}
+
+                  {formData.details.isolation.murs.presence && (
+                    <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                      <VStack spacing={4} align="stretch">
+                        <StateSelector
+                          label="État de l'isolation des murs"
+                          currentValue={
+                            formData.details.isolation.murs.condition
+                          }
+                          onChange={(value) =>
+                            handleInputChange(
+                              "details.isolation.murs.condition",
+                              value
+                            )
+                          }
+                          fieldId="isolation-murs-state"
+                        />
+
+                        {formData.details.isolation.murs.pose ===
+                          "En soufflage" && (
+                          <FormControl>
+                            <FormLabel>
+                              Le croutage obligatoire pour l'isolation{" "}
+                              {formData.details.isolation.murs.type} des Murs
+                              avec une pose en soufflage a été effectué ?
+                            </FormLabel>
+                            <RadioGroup
+                              value={
+                                formData.details.isolation.murs.croutageEffectue
+                                  ? "oui"
+                                  : "non"
+                              }
+                              onChange={(value) =>
+                                handleInputChange(
+                                  "details.isolation.murs.croutageEffectue",
+                                  value === "oui"
+                                )
+                              }
+                            >
+                              <Stack direction="row">
+                                <Radio value="oui">Oui</Radio>
+                                <Radio value="non">Non</Radio>
+                              </Stack>
+                            </RadioGroup>
+                          </FormControl>
+                        )}
+                      </VStack>
+                    </Box>
+                  )}
+
+                  {formData.details.isolation.sols?.presence && (
+                    <Box width="100%" borderWidth="1px" borderRadius="md" p={4}>
+                      <VStack spacing={4} align="stretch">
+                        <StateSelector
+                          label="État de l'isolation du sous-sol"
+                          currentValue={
+                            formData.details.isolation.sols.condition
+                          }
+                          onChange={(value) =>
+                            handleInputChange(
+                              "details.isolation.sols.condition",
+                              value
+                            )
+                          }
+                          fieldId="isolation-sols-state"
+                        />
+
+                        {formData.details.isolation.sols.pose ===
+                          "En soufflage" && (
+                          <FormControl>
+                            <FormLabel>
+                              Le croutage obligatoire pour l'isolation{" "}
+                              {formData.details.isolation.sols.type} du Sous-sol
+                              avec une pose en soufflage a été effectué ?
+                            </FormLabel>
+                            <RadioGroup
+                              value={
+                                formData.details.isolation.sols.croutageEffectue
+                                  ? "oui"
+                                  : "non"
+                              }
+                              onChange={(value) =>
+                                handleInputChange(
+                                  "details.isolation.sols.croutageEffectue",
+                                  value === "oui"
+                                )
+                              }
+                            >
+                              <Stack direction="row">
+                                <Radio value="oui">Oui</Radio>
+                                <Radio value="non">Non</Radio>
+                              </Stack>
+                            </RadioGroup>
+                          </FormControl>
+                        )}
+                      </VStack>
+                    </Box>
+                  )}
+
+                  {/* Protection incendie */}
+                  <Box width="100%" p={4} borderWidth="1px" borderRadius="md">
+                    <Text fontWeight="bold" fontSize="lg" mb={4}>
+                      Protection incendie
+                    </Text>
+                    <Stack spacing={3}>
+                      <Checkbox
+                        isChecked={
+                          formData.details.securiteIncendie.bouleIncendie
+                        }
+                        onChange={(e) =>
+                          handleInputChange(
+                            "details.securiteIncendie.bouleIncendie",
+                            e.target.checked
+                          )
+                        }
+                        id="boule-incendie"
+                      >
+                        Boule incendie
+                      </Checkbox>
+                      <Checkbox
+                        isChecked={formData.details.securiteIncendie.extincteur}
+                        onChange={(e) =>
+                          handleInputChange(
+                            "details.securiteIncendie.extincteur",
+                            e.target.checked
+                          )
+                        }
+                        id="extincteur"
+                      >
+                        Extincteur
+                      </Checkbox>
+                      <Checkbox
+                        isChecked={
+                          formData.details.securiteIncendie.detecteurFumee
+                        }
+                        onChange={(e) =>
+                          handleInputChange(
+                            "details.securiteIncendie.detecteurFumee",
+                            e.target.checked
+                          )
+                        }
+                        id="detecteur-fumee"
+                      >
+                        Détecteur de fumée
+                      </Checkbox>
+                    </Stack>
+                  </Box>
+                </VStack>
+              </CardBody>
+            </Card>
+          </VStack>
+        );
+
       case 13:
         return (
           <VStack spacing={6}>
