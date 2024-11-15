@@ -46,6 +46,9 @@ import {
   AlertDescription,
   Wrap,
   WrapItem,
+  FormHelperText,
+  Switch,
+
 } from "@chakra-ui/react";
 import { FaPlus, FaTrash, FaHome, FaBuilding } from "react-icons/fa";
 import { useRouter } from "next/navigation";
@@ -2478,99 +2481,143 @@ const ExpertiseForm: React.FC<ExpertiseFormProps> = ({
           </VStack>
         );
 
-      case 11:
-        return (
+        case 11:
+  return (
+    <VStack spacing={6}>
+      <Heading size="md">Configuration de la toiture</Heading>
+      <Card width="100%">
+        <CardBody>
           <VStack spacing={6}>
-            <Heading size="md">Configuration de la toiture</Heading>
-            <Card width="100%">
-              <CardBody>
-                <Grid
-                  templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
-                  gap={6}
+            {/* Champs obligatoires */}
+            <Grid
+              templateColumns={isMobile ? "1fr" : "1fr 1fr"}
+              gap={6}
+              width="100%"
+            >
+              <FormControl isRequired>
+                <FormLabel>Type de toiture</FormLabel>
+                <Select
+                  value={formData.details.roof.type}
+                  onChange={(e) =>
+                    handleInputChange("details.roof.type", e.target.value)
+                  }
                 >
-                  <FormControl isRequired>
-                    <FormLabel>Type de toiture</FormLabel>
-                    <Select
-                      value={formData.details.roof.type}
-                      onChange={(e) =>
-                        handleInputChange("details.roof.type", e.target.value)
-                      }
-                    >
-                      <option value="">Sélectionnez un type</option>
-                      {TYPE_TOITURE.map((type) => (
-                        <option key={type} value={type}>
-                          {type}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <option value="">Sélectionnez un type</option>
+                  {TYPE_TOITURE.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </Select>
+              </FormControl>
 
-                  <FormControl isRequired>
-                    <FormLabel>Type de faîtage</FormLabel>
-                    <RadioGroup
-                      value={formData.details.roof.ridgeType}
-                      onChange={(value) =>
-                        handleInputChange("details.roof.ridgeType", value)
-                      }
-                    >
-                      <Stack direction="row">
-                        {TYPE_FAITAGE.map((type) => (
-                          <Radio key={type} value={type}>
-                            {type}
-                          </Radio>
-                        ))}
-                      </Stack>
-                    </RadioGroup>
-                  </FormControl>
+              <FormControl isRequired>
+                <FormLabel>Type de faîtage</FormLabel>
+                <RadioGroup
+                  value={formData.details.roof.ridgeType}
+                  onChange={(value) =>
+                    handleInputChange("details.roof.ridgeType", value)
+                  }
+                >
+                  <Stack direction="row">
+                    {TYPE_FAITAGE.map((type) => (
+                      <Radio key={type} value={type}>
+                        {type}
+                      </Radio>
+                    ))}
+                  </Stack>
+                </RadioGroup>
+              </FormControl>
+            </Grid>
 
-                  <FormControl isRequired>
-                    <FormLabel>Date d'entretien</FormLabel>
-                    <Input
-                      type="date"
-                      value={formData.details.roof.maintenanceDate}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.roof.maintenanceDate",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
+            {/* Séparateur */}
+            <Divider my={4} borderColor="gray.300" />
 
-                  <FormControl isRequired>
-                    <FormLabel>Type d'entretien effectué</FormLabel>
-                    <Input
-                      value={formData.details.roof.maintenanceType}
-                      onChange={(e) =>
-                        handleInputChange(
-                          "details.roof.maintenanceType",
-                          e.target.value
-                        )
-                      }
-                    />
-                  </FormControl>
+            {/* Champs facultatifs */}
+            <Box width="100%">
+              <Text fontSize="sm" color="gray.600" mb={4}>
+                Informations complémentaires (facultatives)
+              </Text>
+              <Grid
+                templateColumns={isMobile ? "1fr" : "repeat(2, 1fr)"}
+                gap={6}
+              >
+                <FormControl>
+                  <FormLabel>
+                    Date du dernier entretien
+                  </FormLabel>
+                  <Input
+                    type="date"
+                    value={formData.details.roof.maintenanceDate || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.roof.maintenanceDate",
+                        e.target.value || null
+                      )
+                    }
+                  />
+                  <FormHelperText>
+                    Format: JJ/MM/AAAA
+                  </FormHelperText>
+                </FormControl>
 
-                  <FormControl isRequired>
-                    <FormLabel>Année d'installation</FormLabel>
-                    <NumberInput
-                      min={1950}
-                      max={new Date().getFullYear()}
-                      value={formData.details.roof.installationYear}
-                      onChange={(value) =>
-                        handleInputChange(
-                          "details.roof.installationYear",
-                          parseInt(value)
-                        )
-                      }
-                    >
-                      <NumberInputField />
-                    </NumberInput>
-                  </FormControl>
-                </Grid>
-              </CardBody>
-            </Card>
+                <FormControl>
+                  <FormLabel>
+                    Type d'entretien effectué
+                  </FormLabel>
+                  <Input
+                    value={formData.details.roof.maintenanceType || ''}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.roof.maintenanceType",
+                        e.target.value
+                      )
+                    }
+                    placeholder="Description de l'entretien"
+                  />
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>
+                    Année d'installation
+                  </FormLabel>
+                  <NumberInput
+                    min={1800}
+                    max={new Date().getFullYear()}
+                    value={formData.details.roof.installationYear || ''}
+                    onChange={(value) =>
+                      handleInputChange(
+                        "details.roof.installationYear",
+                        value ? parseInt(value) : null
+                      )
+                    }
+                  >
+                    <NumberInputField placeholder="AAAA" />
+                  </NumberInput>
+                </FormControl>
+
+                <FormControl>
+                  <FormLabel>
+                    Présence d'impuretés
+                  </FormLabel>
+                  <Switch
+                    isChecked={formData.details.roof.hasImpurities}
+                    onChange={(e) =>
+                      handleInputChange(
+                        "details.roof.hasImpurities",
+                        e.target.checked
+                      )
+                    }
+                  />
+                
+                </FormControl>
+              </Grid>
+            </Box>
           </VStack>
-        );
+        </CardBody>
+      </Card>
+    </VStack>
+  );
       case 12:
         return (
           <VStack spacing={6}>

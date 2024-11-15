@@ -220,10 +220,10 @@ const ExpertiseSchema = new mongoose.Schema({
   toiture: {
     type: { type: String, enum: ['Ardoise Naturelle', 'Ardoise Fibrociment', 'Tuiles', 'Tuiles Béton', 'Acier'], required: true },
     typeFaitage: { type: String, enum: ['Cimente', 'En Boîte'], required: true },
-    dateEntretien: { type: Date, required: true },
-    typeEntretien: { type: String, required: true },
-    presenceImpuretes: { type: Boolean, required: true },
-    annee: { type: Number, required: true },
+    dateEntretien: { type: Date, required: false },
+    typeEntretien: { type: String, required: false },
+    presenceImpuretes: { type: Boolean, required: false },
+    annee: { type: Number, required: false },
     etat: { type: String, enum: ['Bon', 'Moyen', 'Mauvais'], required: true }
   },
 
